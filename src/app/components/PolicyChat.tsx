@@ -157,11 +157,15 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
     setInput('');
     
     // Check if the message contains policy comparison request
-    const isPolicyComparison = userMessage.toLowerCase().includes('comparison') && 
-                              (userMessage.toLowerCase().includes('policy') || 
-                               userMessage.toLowerCase().includes('policies')) &&
-                              (userMessage.toLowerCase().includes('hud') || 
-                               userMessage.toLowerCase().includes('scott turner'));
+    const isPolicyComparison = 
+      (userMessage.toLowerCase().includes('comparison') && 
+       (userMessage.toLowerCase().includes('policy') || 
+        userMessage.toLowerCase().includes('policies'))) ||
+      userMessage.toLowerCase().includes('create a chart') || 
+      userMessage.toLowerCase().includes('show a chart') ||
+      userMessage.toLowerCase().includes('generate a chart') ||
+      userMessage.toLowerCase().includes('make a chart') ||
+      userMessage.toLowerCase().includes('display a chart');
     
     // If it's a policy comparison request, add custom chart data
     let customChartData: PolicyData[] | undefined = undefined;
@@ -170,13 +174,18 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
       customChartData = policyData;
       
       // Or try to parse from the message
-      if (userMessage.includes('-') && 
-          (userMessage.includes('implemented') || userMessage.includes('reduced') || userMessage.includes('eliminated'))) {
+      if ((userMessage.includes('-') && 
+          (userMessage.includes('implemented') || userMessage.includes('reduced') || userMessage.includes('eliminated'))) ||
+          userMessage.includes('%')) {
         const parsedData = createPolicyDataFromText(userMessage);
         if (parsedData.length > 0) {
           customChartData = parsedData;
           updatePolicyData(parsedData);
         }
+      } else {
+        // For simple chart requests without specific data
+        const defaultData = createPolicyDataFromText(userMessage);
+        customChartData = defaultData;
       }
     }
     
@@ -201,7 +210,9 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
           threadId,
           message: userMessage,
           vectorStoreId: activeVectorStoreId,
-          useWebSearch: useWebSearch
+          useWebSearch: useWebSearch,
+          // Pass chart request flag to the API
+          isChartRequest: isPolicyComparison
         }),
       });
       
@@ -215,11 +226,11 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
             role: 'assistant',
             content: data.message.content,
             sources: data.message.sources,
-            hasChartImage: data.message.hasChartImage,
+            hasChartImage: data.message.hasChartImage || isPolicyComparison,
             chartImageUrl: data.message.chartImageUrl,
             webSearchUsed: data.message.webSearchUsed,
             webSearchResults: data.message.webSearchResults,
-            customChartData: data.message.customChartData
+            customChartData: data.message.customChartData || (isPolicyComparison ? customChartData : undefined)
           },
         ]);
       } else {
@@ -1071,7 +1082,7 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
                           <FiGlobe size="10px" color="#4299E1" style={{ marginRight: '0px' }} />
                         </Box>
                         <Box>
-                          <Text as="a" href={source.document} target="_blank" rel="noopener noreferrer" color="blue.500" textDecoration="underline" fontWeight="medium" display="flex" alignItems="center">
+                          <Text as="a" href={source.document} target="_blank" rel="noopener noreferrer" color="blue.500" textDecoration="underline" fontWeight="medium" display="flex" alignItems="center" _hover={{ color: "blue.700" }} className="source-link">
                             {source.section} <FiExternalLink size="10px" style={{ marginLeft: '4px' }} />
                           </Text>
                           <Text color="blue.600" fontSize="10px" fontWeight="medium" mb="2px" _dark={{ color: "blue.200" }}>
@@ -1083,7 +1094,7 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
                             </Text>
                           )}
                           <Text color="blue.400" fontSize="10px" mt="2px" _dark={{ color: "blue.300" }}>
-                            Click the link above to view the full source
+                            Click the link above to view the full source (opens in new tab)
                           </Text>
                         </Box>
                       </>
@@ -1251,6 +1262,18 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
           border-radius: 5px;
           overflow-x: auto;
           margin-bottom: 0.5rem;
+        }
+        
+        .source-link {
+          color: #3182CE !important;
+          font-weight: 600 !important;
+          text-decoration: underline !important;
+          transition: color 0.2s ease-in-out !important;
+        }
+        
+        .source-link:hover {
+          color: #2B6CB0 !important;
+          text-decoration: underline !important;
         }
       `}</style>
     </Box>

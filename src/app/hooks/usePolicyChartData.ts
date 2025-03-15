@@ -19,6 +19,16 @@ export const usePolicyChartData = () => {
       category: "DEI Policies",
       currentPolicy: 100, // Fully implemented
       turnerPolicy: 10,   // Significantly reduced
+    },
+    {
+      category: "Fair Housing",
+      currentPolicy: 90, // Mostly implemented
+      turnerPolicy: 30,  // Partially implemented
+    },
+    {
+      category: "Homeless Assistance",
+      currentPolicy: 85, // Mostly implemented
+      turnerPolicy: 40,  // Partially implemented
     }
   ]);
 
@@ -40,6 +50,40 @@ export const createPolicyDataFromText = (text: string): PolicyData[] => {
   
   const lines = text.split('\n').filter(line => line.trim() !== '');
   const data: PolicyData[] = [];
+  
+  // Check if this is a chart creation request without specific data
+  const isChartRequest = text.toLowerCase().includes('create a chart') || 
+                         text.toLowerCase().includes('show a chart') ||
+                         text.toLowerCase().includes('generate a chart') ||
+                         text.toLowerCase().includes('make a chart') ||
+                         text.toLowerCase().includes('display a chart') ||
+                         text.toLowerCase().includes('policy comparison chart');
+  
+  // If it's just a chart request without specific data, return default data
+  if (isChartRequest && !text.includes('%') && !text.includes('implemented')) {
+    return [
+      {
+        category: "AFFH Rule",
+        currentPolicy: 100, // Fully implemented
+        turnerPolicy: 0,    // Eliminated
+      },
+      {
+        category: "DEI Policies",
+        currentPolicy: 100, // Fully implemented
+        turnerPolicy: 10,   // Significantly reduced
+      },
+      {
+        category: "Fair Housing",
+        currentPolicy: 90, // Mostly implemented
+        turnerPolicy: 30,  // Partially implemented
+      },
+      {
+        category: "Homeless Assistance",
+        currentPolicy: 85, // Mostly implemented
+        turnerPolicy: 40,  // Partially implemented
+      }
+    ];
+  }
   
   for (const line of lines) {
     // Look for patterns like "Policy Name: Current X%, Turner Y%"
@@ -75,5 +119,26 @@ export const createPolicyDataFromText = (text: string): PolicyData[] => {
     }
   }
   
-  return data;
+  return data.length > 0 ? data : [
+    {
+      category: "AFFH Rule",
+      currentPolicy: 100,
+      turnerPolicy: 0,
+    },
+    {
+      category: "DEI Policies",
+      currentPolicy: 100,
+      turnerPolicy: 10,
+    },
+    {
+      category: "Fair Housing",
+      currentPolicy: 90,
+      turnerPolicy: 30,
+    },
+    {
+      category: "Homeless Assistance",
+      currentPolicy: 85,
+      turnerPolicy: 40,
+    }
+  ];
 }; 
