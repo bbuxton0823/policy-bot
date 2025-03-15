@@ -1,6 +1,21 @@
 # Policy Bot
 
-A modern, AI-powered chatbot application that allows users to upload policy documents, store them in OpenAI's vector database, and query them using natural language. Get instant, accurate answers to policy questions with source citations.
+A modern, AI-powered chatbot application designed specifically for organizations to manage, search, and interact with their policy documents using natural language. Policy Bot transforms how employees and stakeholders access and understand organizational policies by providing instant, accurate answers with source citations, eliminating the need to manually search through lengthy documents.
+
+## Introduction
+
+Policy Bot serves as your organization's policy knowledge base and assistant, making policy information accessible through natural conversation. Whether you're looking for specific policy details, need clarification on procedures, or want to understand how policies apply to particular situations, Policy Bot provides accurate, sourced answers in seconds.
+
+The application allows you to:
+
+- Upload and manage your organization's policy documents in various formats
+- Query policies using natural language, just as you would ask a colleague
+- Receive answers with specific citations to source documents and sections
+- Supplement policy information with current web data when needed
+- Save and manage conversation threads for future reference
+- Access policy information from any device with a web browser
+
+**We strongly recommend reading this entire README file** to fully understand the capabilities and setup requirements of Policy Bot. This documentation provides comprehensive information on installation, configuration, usage, and troubleshooting to ensure you get the most out of the application.
 
 ## Features
 
@@ -24,6 +39,7 @@ A modern, AI-powered chatbot application that allows users to upload policy docu
   - Clean, modern UI with Chakra UI components
   - Responsive design for desktop and mobile use
   - Helpful tooltips and status indicators
+  - Dark mode support for reduced eye strain
 
 ## Tech Stack
 
@@ -130,12 +146,82 @@ There are two ways to upload policy documents:
 
 ## How It Works
 
-1. **Document Upload**: When you upload documents, they are sent to OpenAI's Files API and then added to a vector store.
-2. **Vector Storage**: OpenAI automatically processes the documents, extracts text, and creates vector embeddings for semantic search.
-3. **Assistant Integration**: The application connects the vector store to an OpenAI Assistant with the file_search and web_search tools.
-4. **Chat Interface**: When you ask questions, the Assistant uses the vector store to find relevant information in your documents and provides answers with citations.
-5. **Web Search**: When enabled, the assistant can supplement policy information with current data from the web, citing web sources separately from document sources.
-6. **Chat Memory**: The application maintains conversation history within a thread, allowing the assistant to reference previous messages and maintain context throughout the conversation.
+Policy Bot leverages advanced AI technologies to create a seamless experience for accessing and understanding policy information. Here's a detailed breakdown of how the system functions:
+
+### 1. Document Processing and Storage
+
+When you upload policy documents to the system, several processes occur:
+
+- **File Upload**: Documents are securely transmitted to the server using encrypted connections.
+- **Document Conversion**: The system processes various file formats (PDF, DOCX, TXT) and extracts the text content.
+- **Chunking**: Large documents are automatically divided into smaller, semantically meaningful chunks for more effective processing.
+- **Vector Embedding**: Each document chunk is transformed into a high-dimensional vector representation using OpenAI's embedding models. These vectors capture the semantic meaning of the text.
+- **Vector Storage**: The vectors are stored in a vector database, creating a searchable knowledge base of your policy documents.
+- **Metadata Tracking**: The system maintains metadata about each document, including filename, upload date, and document type.
+- **Persistence**: Document information is stored in a JSON file (`documents.json`), ensuring your uploaded documents remain available across application restarts.
+
+### 2. Chat Interface and Query Processing
+
+The chat interface is the primary way users interact with policy information:
+
+- **Thread Management**: Each conversation exists within a thread that maintains context and history.
+- **Query Analysis**: When a user submits a question, the AI assistant analyzes it to understand the intent and required information.
+- **Vector Search**: The system converts the query into a vector and performs a similarity search against the document vectors to find the most relevant information.
+- **Context Assembly**: Relevant document chunks are assembled into a context window that the AI can reference.
+- **Response Generation**: The AI generates a natural language response based on the relevant policy information.
+- **Source Citation**: Each response includes citations to the specific documents and sections where the information was found.
+- **Thread Persistence**: Conversations can be saved, named, and retrieved later, allowing users to continue previous discussions.
+
+### 3. Web Search Integration
+
+When enabled, the web search feature enhances responses with current information:
+
+- **Toggle Control**: Users can enable or disable web search with a simple toggle in the interface.
+- **Query Reformulation**: The system reformulates the user's question into an effective web search query.
+- **API Integration**: The application uses Google's Custom Search API to retrieve relevant web results.
+- **Result Processing**: Web search results are processed and filtered for relevance.
+- **Information Integration**: The AI seamlessly integrates web information with policy document information in its responses.
+- **Source Distinction**: Web sources are clearly distinguished from document sources in the response.
+
+### 4. Visual Content Generation
+
+For data visualization needs, the system can generate charts and graphs:
+
+- **Data Interpretation**: The AI can interpret numerical data mentioned in queries or found in documents.
+- **Chart Generation**: Using OpenAI's code interpreter tool, the system can generate visual representations of data.
+- **Image Serving**: Generated charts are served through a dedicated image API endpoint.
+- **Inline Display**: Charts appear directly in the chat interface for immediate reference.
+
+### 5. User Interface Features
+
+The application includes several UI features for enhanced usability:
+
+- **Tabbed Interface**: Separate tabs for Chat, Document Library, and Upload provide organized access to functionality.
+- **Dark Mode**: A system-wide dark mode option reduces eye strain in low-light environments.
+- **Responsive Design**: The interface adapts to different screen sizes for desktop and mobile use.
+- **Drag-and-Drop**: Intuitive drag-and-drop functionality for document uploads in both the upload tab and chat interface.
+- **Visual Indicators**: Clear visual feedback for processes like document uploading, web search status, and message sending.
+- **Thread Management**: Tools for saving, loading, and creating new conversation threads.
+
+### 6. Security and Privacy
+
+The application implements several security measures:
+
+- **API Key Protection**: OpenAI and Google API keys are stored securely in environment variables.
+- **Document Isolation**: Each organization's documents are isolated in their own vector stores.
+- **Local Processing**: Document processing occurs on your server, not shared with third parties.
+- **Access Control**: The application can be deployed behind authentication systems for controlled access.
+
+### 7. Technical Architecture
+
+The application uses a modern technical stack:
+
+- **Next.js Framework**: Provides server-side rendering and API routes in a single application.
+- **React Components**: Modular UI components for maintainability and reusability.
+- **Chakra UI**: A component library that provides accessible, responsive UI elements.
+- **OpenAI Integration**: Direct integration with OpenAI's Assistants API, Files API, and Embeddings API.
+- **RESTful API Design**: Clean API endpoints for chat, documents, and image serving.
+- **Stateless Design**: The application maintains state in the client and in persistent storage, allowing for horizontal scaling.
 
 ## Development
 
