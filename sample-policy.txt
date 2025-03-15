@@ -1,0 +1,50 @@
+# Company Remote Work Policy
+
+## Overview
+This policy outlines the guidelines and expectations for employees working remotely at our company.
+
+## Eligibility
+All full-time employees who have completed their 90-day probationary period are eligible for remote work, subject to manager approval.
+
+## Work Hours
+Remote employees are expected to maintain their regular work schedule, typically 9:00 AM to 5:00 PM in their local time zone, unless otherwise arranged with their manager.
+
+## Communication
+Remote employees must:
+- Be available via company-approved communication channels during work hours
+- Respond to messages within 2 hours during work hours
+- Attend all required virtual meetings
+- Update their status on the company chat platform when stepping away
+
+## Equipment and Security
+The company will provide:
+- Laptop computer
+- Basic office supplies
+
+Employees must:
+- Maintain a secure home network with password protection
+- Use VPN when accessing company resources
+- Lock devices when not in use
+- Report lost or stolen equipment immediately
+- Not use public Wi-Fi for company business without VPN
+
+## Workspace Requirements
+Remote employees should maintain:
+- A dedicated workspace free from distractions
+- Ergonomic setup (chair, desk, proper lighting)
+- Reliable internet connection (minimum 50 Mbps download/10 Mbps upload)
+
+## Expenses
+The company will reimburse:
+- Internet service (up to $50/month)
+- Cell phone usage for business purposes (up to $30/month)
+- Office supplies with prior approval
+
+## Performance Expectations
+Remote employees are held to the same performance standards as in-office employees. Managers will:
+- Conduct regular check-ins
+- Provide clear objectives and deadlines
+- Evaluate performance based on output and results
+
+## Policy Updates
+This policy was last updated on March 15, 2024. The company reserves the right to modify this policy at any time with appropriate notice to employees. 

@@ -1,0 +1,52 @@
+# Data Security Policy
+
+## Purpose
+This policy establishes guidelines for protecting company data and information systems from unauthorized access, disclosure, alteration, and destruction.
+
+## Scope
+This policy applies to all employees, contractors, consultants, temporary staff, and other workers at the company, including all personnel affiliated with third parties.
+
+## Data Classification
+Company data is classified into the following categories:
+
+1. **Public**: Information that can be freely shared with the public
+2. **Internal**: Information for internal use only, not harmful if disclosed
+3. **Confidential**: Sensitive information that could cause harm if disclosed
+4. **Restricted**: Highly sensitive information that would cause serious harm if disclosed
+
+## Access Control
+- Access to data and systems is granted on a need-to-know basis
+- All access requires unique user identification and authentication
+- Privileged access requires additional authorization and monitoring
+- Access rights must be reviewed quarterly
+- Access must be revoked immediately upon termination or role change
+
+## Password Requirements
+All system passwords must:
+- Be at least 12 characters long
+- Include uppercase and lowercase letters, numbers, and special characters
+- Be changed every 90 days
+- Not be reused for at least 12 cycles
+- Not contain easily guessable information (names, dates, etc.)
+
+## Data Storage and Handling
+- Confidential and restricted data must be encrypted at rest
+- Data must be backed up regularly according to the backup schedule
+- Removable media containing sensitive data must be encrypted
+- Printed confidential information must be shredded when no longer needed
+- Cloud storage services must be approved by IT before use
+
+## Incident Response
+In case of a suspected data breach:
+1. Report the incident immediately to the IT Security team
+2. Preserve all evidence
+3. Do not discuss the incident with unauthorized personnel
+4. Follow the Incident Response Plan procedures
+
+## Compliance and Enforcement
+- Violations of this policy may result in disciplinary action
+- Regular security audits will be conducted to ensure compliance
+- All employees must complete annual security awareness training
+
+## Policy Updates
+This policy was last updated on March 1, 2024. The company reserves the right to modify this policy at any time with appropriate notice to employees. 
