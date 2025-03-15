@@ -138,5 +138,15 @@
     "size": 241826,
     "version": "1.0",
     "openaiFileId": "file-DQ5QM33SJ4ttQHj1ZmwGcc"
+  },
+  {
+    "id": "45f4c390-7831-4614-b32d-38c89186e1ed",
+    "name": "Admin Plan_2021-2022.pdf",
+    "uploadedAt": "2025-03-15T04:48:13.734Z",
+    "status": "active",
+    "fileType": ".pdf",
+    "size": 1869336,
+    "version": "1.0",
+    "openaiFileId": "file-68sijaNanxEwxN677PvGU4"
   }
 ]
