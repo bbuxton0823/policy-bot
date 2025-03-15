@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Policy Bot API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .response {
+            background-color: #f9f9f9;
+            padding: 8px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Policy Bot API Test</h1>
+    <div class="container">
+        <div class="card">
+            <h2>1. Create Thread</h2>
+            <button id="createThreadBtn">Create Thread</button>
+            <div id="threadResponse" class="response"></div>
+        </div>
+        
+        <div class="card">
+            <h2>2. Send Message</h2>
+            <label for="threadId">Thread ID:</label>
+            <input type="text" id="threadId" style="width: 100%; padding: 8px; margin-top: 8px;">
+            
+            <label for="message">Message:</label>
+            <textarea id="message">Who is the HUD secretary?</textarea>
+            
+            <div style="margin-top: 16px;">
+                <button id="sendMessageBtn">Send Message</button>
+                <button id="sendChartRequestBtn">Send Chart Request</button>
+            </div>
+            
+            <div id="messageResponse" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('createThreadBtn').addEventListener('click', async () => {
+            const responseElement = document.getElementById('threadResponse');
+            responseElement.textContent = 'Creating thread...';
+            
+            try {
+                const response = await fetch('http://localhost:3009/api/chat/thread', {
+                    method: 'POST',
+                });
+                
+                const data = await response.json();
+                responseElement.textContent = JSON.stringify(data, null, 2);
+                
+                if (data.threadId) {
+                    document.getElementById('threadId').value = data.threadId;
+                }
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}`;
+            }
+        });
+        
+        document.getElementById('sendMessageBtn').addEventListener('click', async () => {
+            await sendMessage(document.getElementById('message').value);
+        });
+        
+        document.getElementById('sendChartRequestBtn').addEventListener('click', async () => {
+            await sendMessage('Show me a chart of HUD policies');
+        });
+        
+        async function sendMessage(messageText) {
+            const responseElement = document.getElementById('messageResponse');
+            const threadId = document.getElementById('threadId').value;
+            
+            if (!threadId) {
+                responseElement.textContent = 'Error: Please create a thread first';
+                return;
+            }
+            
+            responseElement.textContent = 'Sending message...';
+            
+            try {
+                const response = await fetch('http://localhost:3009/api/chat/message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        threadId,
+                        message: messageText,
+                        useWebSearch: false
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                // Format the response for better readability
+                const formattedResponse = {
+                    content: data.message.content,
+                    hasChartData: data.message.customChartData ? true : false,
+                    chartDataLength: data.message.customChartData ? data.message.customChartData.length : 0
+                };
+                
+                responseElement.textContent = JSON.stringify(formattedResponse, null, 2);
+                
+                // If there's chart data, display it
+                if (data.message.customChartData && data.message.customChartData.length > 0) {
+                    responseElement.textContent += '\n\nChart Data:\n' + 
+                        JSON.stringify(data.message.customChartData, null, 2);
+                }
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html> 
