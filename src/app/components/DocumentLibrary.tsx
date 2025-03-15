@@ -6,9 +6,12 @@ import {
   Badge, IconButton, Text, Flex, Spacer, 
   useDisclosure, Modal, ModalOverlay, 
   ModalContent, ModalHeader, ModalBody, 
-  ModalFooter, Button, Tooltip
+  ModalFooter, Button, Tooltip,
+  useToast, AlertDialog, AlertDialogBody,
+  AlertDialogFooter, AlertDialogHeader,
+  AlertDialogContent, AlertDialogOverlay
 } from '@chakra-ui/react';
-import { FiTrash2, FiEye, FiRefreshCw, FiAlertTriangle } from 'react-icons/fi';
+import { FiTrash2, FiEye, FiRefreshCw, FiAlertTriangle, FiCopy } from 'react-icons/fi';
 
 interface Document {
   id: string;
@@ -27,11 +30,35 @@ const DocumentLibrary: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
+  const [duplicateGroups, setDuplicateGroups] = useState<Record<string, Document[]>>({});
+  const [selectedDuplicateGroup, setSelectedDuplicateGroup] = useState<Document[]>([]);
+  const [documentToKeep, setDocumentToKeep] = useState<Document | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { 
+    isOpen: isDeleteDialogOpen, 
+    onOpen: onDeleteDialogOpen, 
+    onClose: onDeleteDialogClose 
+  } = useDisclosure();
+  const cancelRef = React.useRef<HTMLButtonElement>(null);
+  const toast = useToast();
 
   useEffect(() => {
     fetchDocuments();
   }, []);
+
+  useEffect(() => {
+    // Group documents by duplicateGroupId
+    const groups: Record<string, Document[]> = {};
+    documents.forEach(doc => {
+      if (doc.possibleDuplicate && doc.duplicateGroupId) {
+        if (!groups[doc.duplicateGroupId]) {
+          groups[doc.duplicateGroupId] = [];
+        }
+        groups[doc.duplicateGroupId].push(doc);
+      }
+    });
+    setDuplicateGroups(groups);
+  }, [documents]);
 
   const fetchDocuments = async () => {
     setLoading(true);
@@ -142,11 +169,93 @@ const DocumentLibrary: React.FC = () => {
     );
   };
 
+  // Function to handle opening the duplicate deletion dialog
+  const handleOpenDuplicateDialog = (doc: Document) => {
+    if (!doc.possibleDuplicate || !doc.duplicateGroupId) return;
+    
+    const group = documents.filter(d => d.duplicateGroupId === doc.duplicateGroupId);
+    if (group.length <= 1) return;
+    
+    // Sort by upload date (newest first)
+    const sortedGroup = [...group].sort((a, b) => 
+      new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+    );
+    
+    setSelectedDuplicateGroup(sortedGroup);
+    setDocumentToKeep(sortedGroup[0]); // Default to keeping the newest document
+    onDeleteDialogOpen();
+  };
+
+  // Function to delete all duplicates except the one to keep
+  const handleDeleteDuplicates = async () => {
+    if (!documentToKeep || selectedDuplicateGroup.length <= 1) return;
+    
+    const docsToDelete = selectedDuplicateGroup.filter(doc => doc.id !== documentToKeep.id);
+    
+    try {
+      let successCount = 0;
+      
+      for (const doc of docsToDelete) {
+        const response = await fetch(`/api/documents/${doc.id}`, {
+          method: 'DELETE',
+        });
+        
+        if (response.ok) {
+          successCount++;
+        }
+      }
+      
+      if (successCount > 0) {
+        toast({
+          title: 'Duplicates deleted',
+          description: `Successfully deleted ${successCount} duplicate document${successCount > 1 ? 's' : ''}.`,
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+        
+        // Refresh the document list
+        fetchDocuments();
+      }
+    } catch (error) {
+      console.error('Error deleting duplicates:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete duplicate documents.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+    
+    onDeleteDialogClose();
+  };
+
+  // Count the number of duplicate groups
+  const duplicateGroupCount = Object.keys(duplicateGroups).length;
+
   return (
     <Box p={6} borderWidth="1px" borderRadius="lg" bg="white" shadow="md" _dark={{ bg: "gray.800" }}>
       <Flex mb={4} align="center">
         <Text fontSize="xl" fontWeight="bold">Policy Documents Library</Text>
         <Spacer />
+        {duplicateGroupCount > 0 && (
+          <Button
+            leftIcon={<FiCopy />}
+            colorScheme="orange"
+            size="sm"
+            mr={2}
+            onClick={() => {
+              // Find the first document in a duplicate group
+              const firstDuplicateDoc = documents.find(doc => doc.possibleDuplicate);
+              if (firstDuplicateDoc) {
+                handleOpenDuplicateDialog(firstDuplicateDoc);
+              }
+            }}
+          >
+            Clean Duplicates ({duplicateGroupCount})
+          </Button>
+        )}
         <IconButton
           icon={<FiRefreshCw />}
           aria-label="Refresh documents"
@@ -217,7 +326,7 @@ const DocumentLibrary: React.FC = () => {
                             label={`Possible duplicate${duplicates.length > 1 ? 's' : ''}: ${duplicates.map(d => d.name).join(', ')}`}
                             placement="top"
                           >
-                            <Box ml={2} color="orange.500">
+                            <Box ml={2} color="orange.500" cursor="pointer" onClick={() => handleOpenDuplicateDialog(doc)}>
                               <FiAlertTriangle />
                             </Box>
                           </Tooltip>
@@ -251,6 +360,7 @@ const DocumentLibrary: React.FC = () => {
         </Box>
       )}
 
+      {/* Document Details Modal */}
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalOverlay />
         <ModalContent>
@@ -280,6 +390,18 @@ const DocumentLibrary: React.FC = () => {
                         </Text>
                       ))}
                     </Box>
+                    <Button 
+                      mt={2} 
+                      size="sm" 
+                      colorScheme="orange" 
+                      leftIcon={<FiCopy />}
+                      onClick={() => {
+                        onClose();
+                        handleOpenDuplicateDialog(selectedDoc);
+                      }}
+                    >
+                      Clean Duplicates
+                    </Button>
                   </Box>
                 )}
                 
@@ -303,6 +425,79 @@ const DocumentLibrary: React.FC = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      {/* Duplicate Deletion Confirmation Dialog */}
+      <AlertDialog
+        isOpen={isDeleteDialogOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onDeleteDialogClose}
+        size="lg"
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Clean Duplicate Documents
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              <Text mb={4}>
+                We found {selectedDuplicateGroup.length} similar documents. Select which document to keep and delete the rest:
+              </Text>
+              <Box maxH="300px" overflowY="auto" borderWidth="1px" borderRadius="md" p={2}>
+                {selectedDuplicateGroup.map((doc) => (
+                  <Flex 
+                    key={doc.id} 
+                    p={2} 
+                    mb={2} 
+                    borderWidth="1px" 
+                    borderRadius="md"
+                    bg={documentToKeep?.id === doc.id ? "blue.50" : undefined}
+                    _dark={{ bg: documentToKeep?.id === doc.id ? "blue.900" : "gray.700" }}
+                    onClick={() => setDocumentToKeep(doc)}
+                    cursor="pointer"
+                  >
+                    <Box flex="1">
+                      <Text fontWeight="bold">{doc.name}</Text>
+                      <Text fontSize="sm">Uploaded: {new Date(doc.uploadedAt).toLocaleString()}</Text>
+                      <Text fontSize="sm">Type: {doc.fileType}</Text>
+                      <Text fontSize="sm">Size: {doc.size ? Math.round(doc.size / 1024) : 0} KB</Text>
+                    </Box>
+                    <Box alignSelf="center">
+                      <Button 
+                        size="sm" 
+                        colorScheme={documentToKeep?.id === doc.id ? "blue" : "gray"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDocumentToKeep(doc);
+                        }}
+                      >
+                        Keep This
+                      </Button>
+                    </Box>
+                  </Flex>
+                ))}
+              </Box>
+              <Text mt={4} color="red.500" fontWeight="bold">
+                Warning: This will permanently delete {selectedDuplicateGroup.length - 1} document(s).
+              </Text>
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onDeleteDialogClose}>
+                Cancel
+              </Button>
+              <Button 
+                colorScheme="red" 
+                onClick={handleDeleteDuplicates} 
+                ml={3}
+                isDisabled={!documentToKeep}
+              >
+                Delete Duplicates
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };
