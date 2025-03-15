@@ -983,6 +983,11 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
               </Tooltip>
             )}
             
+            {/* Render message content with ReactMarkdown */}
+            <Box className="message-content">
+              <ReactMarkdown>{msg.content}</ReactMarkdown>
+            </Box>
+            
             {/* Display web search indicator if applicable */}
             {msg.role === 'assistant' && msg.webSearchUsed && (
               <Box mt={2} mb={1}>
@@ -1213,6 +1218,39 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
           0% { transform: scale(0.95); opacity: 0.8; }
           50% { transform: scale(1.05); opacity: 1; }
           100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        
+        .message-content {
+          width: 100%;
+          overflow-wrap: break-word;
+        }
+        
+        .message-content p {
+          margin-bottom: 0.5rem;
+        }
+        
+        .message-content p:last-child {
+          margin-bottom: 0;
+        }
+        
+        .message-content ul, .message-content ol {
+          margin-left: 1.5rem;
+          margin-bottom: 0.5rem;
+        }
+        
+        .message-content code {
+          background-color: rgba(0, 0, 0, 0.1);
+          padding: 0.1rem 0.2rem;
+          border-radius: 3px;
+          font-family: monospace;
+        }
+        
+        .message-content pre {
+          background-color: rgba(0, 0, 0, 0.1);
+          padding: 0.5rem;
+          border-radius: 5px;
+          overflow-x: auto;
+          margin-bottom: 0.5rem;
         }
       `}</style>
     </Box>
