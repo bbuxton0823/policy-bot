@@ -6,14 +6,21 @@ A modern, AI-powered chatbot application designed specifically for organizations
 
 Policy Bot serves as your organization's policy knowledge base and assistant, making policy information accessible through natural conversation. Whether you're looking for specific policy details, need clarification on procedures, or want to understand how policies apply to particular situations, Policy Bot provides accurate, sourced answers in seconds.
 
+Policy Bot is built on OpenAI's advanced language models and vector database technology, enabling it to understand complex policy questions and retrieve relevant information from your organization's document repository. The system maintains context throughout conversations, allowing for natural follow-up questions and detailed explorations of policy topics.
+
 The application allows you to:
 
-- Upload and manage your organization's policy documents in various formats
-- Query policies using natural language, just as you would ask a colleague
-- Receive answers with specific citations to source documents and sections
-- Supplement policy information with current web data when needed
-- Save and manage conversation threads for future reference
-- Access policy information from any device with a web browser
+- **Upload and manage your organization's policy documents** in various formats (PDF, Word, TXT)
+- **Query policies using natural language**, just as you would ask a colleague
+- **Receive answers with specific citations** to source documents and sections
+- **Generate visual representations of policy data** with charts and graphs
+- **Copy charts and visualizations** to clipboard for use in other applications
+- **Supplement policy information** with current web data when needed
+- **Save and manage conversation threads** for future reference
+- **Access policy information** from any device with a web browser
+- **Toggle between light and dark modes** for comfortable viewing in any environment
+
+Policy Bot is designed with both ease of use and powerful functionality in mind. The intuitive interface requires minimal training for users, while the sophisticated AI backend ensures accurate and relevant responses to policy inquiries.
 
 **We strongly recommend reading this entire README file** to fully understand the capabilities and setup requirements of Policy Bot. This documentation provides comprehensive information on installation, configuration, usage, and troubleshooting to ensure you get the most out of the application.
 
@@ -23,15 +30,18 @@ The application allows you to:
   - Drag-and-drop functionality in both upload tab and chat interface
   - Support for PDF, Word, and text documents
   - Visual feedback during upload process
+  - Automatic document processing and vectorization
 
 - **Advanced AI Capabilities**:
-  - Automatic document processing and vectorization using OpenAI
   - Natural language querying of policy documents
+  - Context-aware conversations with follow-up question support
   - Web search integration for accessing current information
   - Persistent chat memory for ongoing conversations
+  - Chart and visualization generation from policy data
 
 - **Rich Information Display**:
   - Source citations for answers with clear distinction between document and web sources
+  - Interactive charts and visualizations with copy-to-clipboard functionality
   - Document versioning and management
   - Visual indicators for active vector stores and web search status
 
@@ -40,6 +50,7 @@ The application allows you to:
   - Responsive design for desktop and mobile use
   - Helpful tooltips and status indicators
   - Dark mode support for reduced eye strain
+  - Thread saving and management for continued conversations
 
 ## Tech Stack
 
@@ -114,35 +125,152 @@ The application will be available at http://localhost:3000.
 There are two ways to upload policy documents:
 
 1. **Via Upload Tab**:
-   - Navigate to the Upload tab
-   - Drag and drop files into the upload area or click to browse
+   - Navigate to the Upload tab in the main navigation
+   - Drag and drop files into the upload area or click to browse your file system
+   - Select one or multiple files (PDF, DOCX, TXT formats supported)
    - Click "Upload Documents" to process them
+   - Wait for the confirmation message indicating successful processing
+   - Documents will be automatically vectorized and made available for querying
 
 2. **Directly in Chat**:
    - Drag and drop files directly into the chat interface
-   - Click the upload icon in the top right of the chat
-   - Files will be processed and made available for querying immediately
+   - Alternatively, click the upload icon (📎) in the chat input area
+   - Select files from your file system
+   - Files will be processed automatically with progress indicators
+   - A confirmation message will appear in the chat when processing is complete
+   - You can immediately begin asking questions about the uploaded documents
+
+**Note**: The system automatically extracts text from documents, creates vector embeddings, and stores them for efficient retrieval. This process may take a few moments depending on document size and complexity.
 
 ### Managing Documents
 
-- View all uploaded documents in the Documents tab
-- See document details including file name, type, and upload date
-- Delete documents when they're no longer needed
+The Documents Library tab provides comprehensive document management capabilities:
+
+- **View all uploaded documents** with details including:
+  - File name and type
+  - Upload date and time
+  - File size
+  - Processing status
+  - Number of text chunks created
+
+- **Document Actions**:
+  - Delete documents when they're no longer needed
+  - View document details including extracted text
+  - Check document processing status
+  - See which vector store contains each document
+
+- **Filtering and Sorting**:
+  - Filter documents by type (PDF, Word, Text)
+  - Sort by upload date, name, or size
+  - Search for specific documents by name
 
 ### Chatting with the Policy Assistant
 
-1. Navigate to the Chat tab
-2. Type your question about company policies in the input field
-3. The assistant will search through your uploaded documents to find relevant information
-4. Answers will include citations to specific documents and sections
-5. For follow-up questions, the assistant maintains context from previous messages
+The Chat tab is the primary interface for interacting with your policy documents:
+
+1. **Starting a Conversation**:
+   - Navigate to the Chat tab
+   - Type your question about company policies in the input field
+   - Press Enter or click the Send button
+   - The assistant will search through your uploaded documents to find relevant information
+   - Responses typically arrive within seconds, depending on query complexity
+
+2. **Understanding Responses**:
+   - Answers include citations to specific documents and sections
+   - Document sources are marked with a file icon (📄)
+   - Web sources (if web search is enabled) are marked with a globe icon (🌐)
+   - Charts and visualizations appear inline when relevant
+   - Sources are listed at the bottom of each response for reference
+
+3. **Follow-up Questions**:
+   - The assistant maintains context from previous messages
+   - You can ask follow-up questions without repeating all the details
+   - Example: After asking about vacation policy, simply ask "How does that apply to new employees?"
+   - The conversation maintains context until you start a new thread
+
+4. **Thread Management**:
+   - Save conversations by clicking the Save icon in the thread menu
+   - Name your threads for easy reference
+   - Access saved threads from the dropdown menu
+   - Start new threads when changing topics
+   - Copy entire conversations to clipboard for sharing or record-keeping
+
+5. **Special Features**:
+   - **Copy functionality**: Copy individual messages, entire conversations, or sources with dedicated copy buttons
+   - **Chart interaction**: Copy charts to clipboard with the copy button in the chart header
+   - **Source exploration**: Click on web sources to open the original webpage
 
 ### Using Web Search
 
-1. Toggle the "Web Search" switch in the chat interface
-2. When enabled, the assistant will supplement policy information with current data from the web
-3. Web sources will be clearly marked with a globe icon and linked to the original source
-4. Document sources will be marked with a file icon
+The web search feature allows the assistant to supplement policy information with current data from the internet:
+
+1. **Enabling Web Search**:
+   - Toggle the "Web Search" switch in the top right of the chat interface
+   - A blue indicator will show when web search is active
+   - Web search can be toggled on/off at any point in a conversation
+
+2. **How Web Search Works**:
+   - When enabled, the assistant will supplement policy information with current data from the web
+   - The system prioritizes web information for current events or topics not covered in your documents
+   - Web sources will be clearly marked with a globe icon (🌐) and linked to the original source
+   - Document sources will be marked with a file icon (📄)
+
+3. **Web Search Indicators**:
+   - Blue globe icon on messages indicates web search was used
+   - Links to web sources are provided for verification
+   - The system indicates when web search was attempted but no relevant results were found
+
+4. **Best Practices**:
+   - Enable web search for questions about current events or industry trends
+   - Keep web search disabled when asking about confidential internal policies
+   - Use web search to compare your policies with industry standards or regulations
+
+### Working with Charts and Visualizations
+
+Policy Bot can generate and display charts to help visualize policy data:
+
+1. **Requesting Charts**:
+   - Ask questions that involve comparative data or statistics
+   - Example: "Show me a comparison of HUD policies before and after Scott Turner's proposed changes"
+   - The system will automatically generate appropriate visualizations
+
+2. **Chart Types Available**:
+   - Bar charts for comparisons
+   - Line charts for trends over time
+   - Pie charts for proportional data
+   - Tables for structured information
+
+3. **Interacting with Charts**:
+   - **Copying charts**: Click the copy icon in the chart header to copy the chart as an image
+   - **Viewing details**: Hover over chart elements to see detailed information
+   - **Using in other applications**: Paste copied charts into documents, presentations, or emails
+
+4. **Chart Data Sources**:
+   - Charts can be generated from data in your policy documents
+   - When web search is enabled, charts may incorporate current data from the web
+   - The system will indicate the source of data used in visualizations
+
+### Advanced Usage Tips
+
+1. **Optimizing Document Uploads**:
+   - Use searchable PDFs rather than scanned images for better text extraction
+   - Break very large documents (100+ pages) into smaller logical sections
+   - Ensure documents have clear titles and section headers for better citation
+
+2. **Crafting Effective Queries**:
+   - Be specific in your questions for more precise answers
+   - Include key terms that would appear in the relevant policy
+   - For complex topics, start with broader questions and then narrow down
+
+3. **Using Context Effectively**:
+   - Reference previous parts of the conversation when needed
+   - Example: "In the vacation policy you mentioned earlier, what are the exceptions?"
+   - The system will maintain context for related follow-up questions
+
+4. **Combining Web Search and Documents**:
+   - Toggle web search on when asking about how your policies compare to industry standards
+   - Use web search to find recent regulatory changes that might affect your policies
+   - Disable web search when discussing confidential internal matters
 
 ## How It Works
 
