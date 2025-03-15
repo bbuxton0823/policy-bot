@@ -83,6 +83,40 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
   
+  // Create a new thread
+  const createThread = async () => {
+    try {
+      const response = await fetch('/api/chat/thread', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create thread');
+      }
+      
+      const data = await response.json();
+      setThreadId(data.threadId);
+      setActiveVectorStoreId(vectorStoreId);
+      
+      // Generate a default thread name based on timestamp
+      const now = new Date();
+      const defaultName = `Chat ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+      setThreadName(defaultName);
+      
+      return data.threadId;
+    } catch (error) {
+      console.error('Error creating thread:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create chat thread. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return null;
+    }
+  };
+  
   // Load saved threads from localStorage
   useEffect(() => {
     const loadSavedThreads = () => {
@@ -100,44 +134,6 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
     loadSavedThreads();
   }, []);
   
-  // Create a thread when the component mounts
-  useEffect(() => {
-    const createThread = async () => {
-      try {
-        const response = await fetch('/api/chat/thread', {
-          method: 'POST',
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setThreadId(data.threadId);
-          setThreadName(`Chat ${new Date().toLocaleString()}`);
-          
-          // Add a welcome message
-          setMessages([
-            {
-              role: 'assistant',
-              content: 'Hello! I\'m your Policy Assistant. Ask me anything about company policies, or upload a document to chat about it.',
-            },
-          ]);
-        } else {
-          throw new Error('Failed to create thread');
-        }
-      } catch (error) {
-        console.error('Error creating thread:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to initialize chat. Please try again.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-      }
-    };
-    
-    createThread();
-  }, [toast]);
-  
   // Update activeVectorStoreId when vectorStoreId prop changes
   useEffect(() => {
     if (vectorStoreId) {
@@ -151,56 +147,46 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
   }, [messages]);
   
   const handleSendMessage = async () => {
-    if (!input.trim() || !threadId) return;
+    if (!input.trim() && !policyData.length) return;
     
-    const userMessage = input.trim();
+    // Clear input field
+    const userMessage = input;
     setInput('');
-    
-    // Check if the message contains policy comparison request
-    const isPolicyComparison = 
-      (userMessage.toLowerCase().includes('comparison') && 
-       (userMessage.toLowerCase().includes('policy') || 
-        userMessage.toLowerCase().includes('policies'))) ||
-      userMessage.toLowerCase().includes('create a chart') || 
-      userMessage.toLowerCase().includes('show a chart') ||
-      userMessage.toLowerCase().includes('generate a chart') ||
-      userMessage.toLowerCase().includes('make a chart') ||
-      userMessage.toLowerCase().includes('display a chart');
-    
-    // If it's a policy comparison request, add custom chart data
-    let customChartData: PolicyData[] | undefined = undefined;
-    if (isPolicyComparison) {
-      // Use the default data from our hook
-      customChartData = policyData;
-      
-      // Or try to parse from the message
-      if ((userMessage.includes('-') && 
-          (userMessage.includes('implemented') || userMessage.includes('reduced') || userMessage.includes('eliminated'))) ||
-          userMessage.includes('%')) {
-        const parsedData = createPolicyDataFromText(userMessage);
-        if (parsedData.length > 0) {
-          customChartData = parsedData;
-          updatePolicyData(parsedData);
-        }
-      } else {
-        // For simple chart requests without specific data
-        const defaultData = createPolicyDataFromText(userMessage);
-        customChartData = defaultData;
-      }
-    }
-    
-    // Add user message to the chat
-    setMessages(prev => [...prev, { 
-      role: 'user', 
-      content: userMessage,
-      // Add an indicator if web search is enabled
-      ...(useWebSearch ? { webSearchEnabled: true } : {}),
-      customChartData
-    }]);
-    
     setLoading(true);
     
     try {
+      // Create a thread if we don't have one
+      if (!threadId) {
+        await createThread();
+        return; // The thread creation will trigger a useEffect that will send the message
+      }
+      
+      // Add user message to the UI immediately
+      const newUserMessage: Message = {
+        role: 'user',
+        content: userMessage,
+        webSearchEnabled: useWebSearch
+      };
+      
+      // Only attach chart data if we actually have data
+      if (policyData.length > 0) {
+        newUserMessage.customChartData = policyData;
+        // Reset the policy data after sending
+        updatePolicyData([]);
+      }
+      
+      setMessages(prevMessages => [...prevMessages, newUserMessage]);
+      
+      // Scroll to bottom
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      
+      // Set web search in progress if enabled
+      if (useWebSearch) {
+        setWebSearchInProgress(true);
+      }
+      
+      // Send message to API
+      console.log('Sending message with vectorStoreId:', activeVectorStoreId);
       const response = await fetch('/api/chat/message', {
         method: 'POST',
         headers: {
@@ -210,44 +196,63 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
           threadId,
           message: userMessage,
           vectorStoreId: activeVectorStoreId,
-          useWebSearch: useWebSearch,
-          // Pass chart request flag to the API
-          isChartRequest: isPolicyComparison
+          useWebSearch,
+          // Only include chart data if we actually have data
+          customChartData: policyData.length > 0 ? policyData : undefined
         }),
       });
       
-      if (response.ok) {
-        const data = await response.json();
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error sending message:', errorData);
         
-        // Add assistant response to the chat
-        setMessages(prev => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: data.message.content,
-            sources: data.message.sources,
-            hasChartImage: data.message.hasChartImage || isPolicyComparison,
-            chartImageUrl: data.message.chartImageUrl,
-            webSearchUsed: data.message.webSearchUsed,
-            webSearchResults: data.message.webSearchResults,
-            customChartData: data.message.customChartData || (isPolicyComparison ? customChartData : undefined)
-          },
-        ]);
-      } else {
-        throw new Error('Failed to send message');
+        // Add error message to chat
+        const errorMessage = {
+          role: 'assistant' as const,
+          content: `I apologize for the inconvenience. It seems there is an issue with accessing the search functionality for the files you uploaded. ${errorData.error || 'Please try again later.'}`,
+        };
+        setMessages(prevMessages => [...prevMessages, errorMessage]);
+        
+        // Show toast with error
+        toast({
+          title: 'Error',
+          description: errorData.error || 'Failed to send message. Please try again.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        
+        return;
       }
+      
+      const data = await response.json();
+      
+      // Reset web search in progress
+      setWebSearchInProgress(false);
+      
+      // Add assistant message to the UI
+      setMessages(prevMessages => [...prevMessages, data.message]);
+      
+      // Scroll to bottom
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error in handleSendMessage:', error);
+      
+      // Add error message to chat
+      const errorMessage = {
+        role: 'assistant' as const,
+        content: 'I apologize for the inconvenience. It seems there is an issue with accessing the search functionality for the files you uploaded. Please check your OpenAI API key and Assistant configuration.',
+      };
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
+      
+      // Show toast with error
       toast({
         title: 'Error',
-        description: 'Failed to send message. Please try again.',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
-      
-      // Remove the user message if there was an error
-      setMessages(prev => prev.slice(0, -1));
     } finally {
       setLoading(false);
     }

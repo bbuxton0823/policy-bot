@@ -8,29 +8,8 @@ export interface PolicyData {
 }
 
 export const usePolicyChartData = () => {
-  // Default data for HUD policies comparison
-  const [policyData, setPolicyData] = useState<PolicyData[]>([
-    {
-      category: "AFFH Rule",
-      currentPolicy: 100, // Fully implemented
-      turnerPolicy: 0,    // Eliminated
-    },
-    {
-      category: "DEI Policies",
-      currentPolicy: 100, // Fully implemented
-      turnerPolicy: 10,   // Significantly reduced
-    },
-    {
-      category: "Fair Housing",
-      currentPolicy: 90, // Mostly implemented
-      turnerPolicy: 30,  // Partially implemented
-    },
-    {
-      category: "Homeless Assistance",
-      currentPolicy: 85, // Mostly implemented
-      turnerPolicy: 40,  // Partially implemented
-    }
-  ]);
+  // Initialize with empty array instead of default data
+  const [policyData, setPolicyData] = useState<PolicyData[]>([]);
 
   // Function to update the chart data
   const updatePolicyData = (newData: PolicyData[]) => {
@@ -52,15 +31,19 @@ export const createPolicyDataFromText = (text: string): PolicyData[] => {
   const data: PolicyData[] = [];
   
   // Check if this is a chart creation request without specific data
-  const isChartRequest = text.toLowerCase().includes('create a chart') || 
-                         text.toLowerCase().includes('show a chart') ||
-                         text.toLowerCase().includes('generate a chart') ||
-                         text.toLowerCase().includes('make a chart') ||
-                         text.toLowerCase().includes('display a chart') ||
-                         text.toLowerCase().includes('policy comparison chart');
+  // Make this more specific to only match explicit HUD policy chart requests
+  const isHudChartRequest = 
+    (text.toLowerCase().includes('hud') || 
+     text.toLowerCase().includes('housing and urban development')) &&
+    (text.toLowerCase().includes('create a chart') || 
+     text.toLowerCase().includes('show a chart') ||
+     text.toLowerCase().includes('generate a chart') ||
+     text.toLowerCase().includes('make a chart') ||
+     text.toLowerCase().includes('display a chart') ||
+     text.toLowerCase().includes('policy comparison chart'));
   
-  // If it's just a chart request without specific data, return default data
-  if (isChartRequest && !text.includes('%') && !text.includes('implemented')) {
+  // Only return default HUD data if explicitly requested
+  if (isHudChartRequest && !text.includes('%') && !text.includes('implemented')) {
     return [
       {
         category: "AFFH Rule",
@@ -119,26 +102,6 @@ export const createPolicyDataFromText = (text: string): PolicyData[] => {
     }
   }
   
-  return data.length > 0 ? data : [
-    {
-      category: "AFFH Rule",
-      currentPolicy: 100,
-      turnerPolicy: 0,
-    },
-    {
-      category: "DEI Policies",
-      currentPolicy: 100,
-      turnerPolicy: 10,
-    },
-    {
-      category: "Fair Housing",
-      currentPolicy: 90,
-      turnerPolicy: 30,
-    },
-    {
-      category: "Homeless Assistance",
-      currentPolicy: 85,
-      turnerPolicy: 40,
-    }
-  ];
+  // Return the parsed data if we found any, otherwise return an empty array
+  return data.length > 0 ? data : [];
 }; 
