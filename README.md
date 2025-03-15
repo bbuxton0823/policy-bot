@@ -2,6 +2,10 @@
 
 A modern, AI-powered chatbot application designed specifically for organizations to manage, search, and interact with their policy documents using natural language. Policy Bot transforms how employees and stakeholders access and understand organizational policies by providing instant, accurate answers with source citations, eliminating the need to manually search through lengthy documents.
 
+## Quick Start
+
+**[📚 View the Comprehensive Installation Guide](./INSTALLATION.md)** - Step-by-step instructions to get Policy Bot up and running quickly.
+
 ## Introduction
 
 Policy Bot serves as your organization's policy knowledge base and assistant, making policy information accessible through natural conversation. Whether you're looking for specific policy details, need clarification on procedures, or want to understand how policies apply to particular situations, Policy Bot provides accurate, sourced answers in seconds.
