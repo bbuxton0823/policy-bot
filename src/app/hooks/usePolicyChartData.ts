@@ -45,6 +45,19 @@ export const createPolicyDataFromText = (text: string): PolicyData[] => {
      text.toLowerCase().includes('visualization') ||
      text.toLowerCase().includes('visualize'));
   
+  // Check if this is any chart request
+  const isChartRequest = 
+    text.toLowerCase().includes('create a chart') || 
+    text.toLowerCase().includes('show a chart') ||
+    text.toLowerCase().includes('generate a chart') ||
+    text.toLowerCase().includes('make a chart') ||
+    text.toLowerCase().includes('display a chart') ||
+    text.toLowerCase().includes('chart') ||
+    text.toLowerCase().includes('visualization') ||
+    text.toLowerCase().includes('visualize') ||
+    text.toLowerCase().includes('graph') ||
+    text.toLowerCase().includes('plot');
+  
   // Only return default HUD data if explicitly requested
   if (isHudChartRequest && !text.includes('%') && !text.includes('implemented')) {
     return [
@@ -67,6 +80,31 @@ export const createPolicyDataFromText = (text: string): PolicyData[] => {
         category: "Homeless Assistance",
         currentPolicy: 85, // Mostly implemented
         turnerPolicy: 40,  // Partially implemented
+      }
+    ];
+  }
+  // Return default policy data for any chart request
+  else if (isChartRequest && !text.includes('%') && !text.includes('implemented')) {
+    return [
+      {
+        category: "Policy A",
+        currentPolicy: 80,
+        turnerPolicy: 30,
+      },
+      {
+        category: "Policy B",
+        currentPolicy: 65,
+        turnerPolicy: 45,
+      },
+      {
+        category: "Policy C",
+        currentPolicy: 90,
+        turnerPolicy: 20,
+      },
+      {
+        category: "Policy D",
+        currentPolicy: 75,
+        turnerPolicy: 50,
       }
     ];
   }
