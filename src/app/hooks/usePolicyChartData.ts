@@ -40,7 +40,8 @@ export const createPolicyDataFromText = (text: string): PolicyData[] => {
      text.toLowerCase().includes('generate a chart') ||
      text.toLowerCase().includes('make a chart') ||
      text.toLowerCase().includes('display a chart') ||
-     text.toLowerCase().includes('policy comparison chart'));
+     text.toLowerCase().includes('policy comparison chart') ||
+     text.toLowerCase().includes('chart of hud policies'));
   
   // Only return default HUD data if explicitly requested
   if (isHudChartRequest && !text.includes('%') && !text.includes('implemented')) {
