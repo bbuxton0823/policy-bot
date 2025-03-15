@@ -188,22 +188,53 @@ const DocumentLibrary: React.FC = () => {
 
   // Function to delete all duplicates except the one to keep
   const handleDeleteDuplicates = async () => {
-    if (!documentToKeep || selectedDuplicateGroup.length <= 1) return;
+    if (!documentToKeep || selectedDuplicateGroup.length <= 1) {
+      console.error("No document selected to keep or not enough documents in the group");
+      return;
+    }
     
     const docsToDelete = selectedDuplicateGroup.filter(doc => doc.id !== documentToKeep.id);
+    console.log("Documents to delete:", docsToDelete.map(d => d.name));
     
     try {
       let successCount = 0;
       
+      // Show a loading toast
+      const loadingToastId = toast({
+        title: 'Deleting duplicates',
+        description: 'Please wait while we delete the duplicate documents...',
+        status: 'loading',
+        duration: null,
+        isClosable: false,
+      });
+      
       for (const doc of docsToDelete) {
-        const response = await fetch(`/api/documents/${doc.id}`, {
-          method: 'DELETE',
-        });
+        console.log(`Attempting to delete document: ${doc.name} (${doc.id})`);
         
-        if (response.ok) {
-          successCount++;
+        try {
+          const response = await fetch(`/api/documents/${doc.id}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          const responseText = await response.text();
+          console.log(`Delete response for ${doc.id}:`, response.status, responseText);
+          
+          if (response.ok) {
+            successCount++;
+            console.log(`Successfully deleted document: ${doc.name} (${doc.id})`);
+          } else {
+            console.error(`Failed to delete document: ${doc.name} (${doc.id}). Status: ${response.status}`);
+          }
+        } catch (docError) {
+          console.error(`Error deleting document ${doc.id}:`, docError);
         }
       }
+      
+      // Close the loading toast
+      toast.close(loadingToastId);
       
       if (successCount > 0) {
         toast({
@@ -215,20 +246,28 @@ const DocumentLibrary: React.FC = () => {
         });
         
         // Refresh the document list
-        fetchDocuments();
+        await fetchDocuments();
+      } else {
+        toast({
+          title: 'No documents deleted',
+          description: 'No documents were deleted. Please try again.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
       }
     } catch (error) {
-      console.error('Error deleting duplicates:', error);
+      console.error('Error in handleDeleteDuplicates:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete duplicate documents.',
+        description: 'Failed to delete duplicate documents. Please check the console for details.',
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
+    } finally {
+      onDeleteDialogClose();
     }
-    
-    onDeleteDialogClose();
   };
 
   // Count the number of duplicate groups
@@ -469,6 +508,17 @@ const DocumentLibrary: React.FC = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           setDocumentToKeep(doc);
+                          console.log("Selected document to keep:", doc.name, doc.id);
+                          
+                          // Provide user feedback
+                          toast({
+                            title: 'Document selected',
+                            description: `Selected "${doc.name}" to keep`,
+                            status: 'info',
+                            duration: 2000,
+                            isClosable: true,
+                            position: 'top'
+                          });
                         }}
                       >
                         Keep This
