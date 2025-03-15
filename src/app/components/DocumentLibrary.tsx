@@ -63,20 +63,52 @@ const DocumentLibrary: React.FC = () => {
   const fetchDocuments = async () => {
     setLoading(true);
     try {
+      console.log('Fetching documents from API...');
       const response = await fetch('/api/documents', {
+        method: 'GET',
         cache: 'no-store',
         headers: {
           'pragma': 'no-cache',
           'cache-control': 'no-cache'
         }
       });
-      if (response.ok) {
-        const data = await response.json();
-        const docsWithDuplicates = identifyPossibleDuplicates(data.documents);
-        setDocuments(docsWithDuplicates);
+      
+      console.log('Documents API response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response from documents API:', errorText);
+        throw new Error(`Failed to fetch documents: ${response.status} ${response.statusText}`);
       }
+      
+      const data = await response.json();
+      console.log('Documents fetched successfully:', data.documents?.length || 0, 'documents');
+      
+      if (!data.documents || !Array.isArray(data.documents)) {
+        console.error('Invalid documents data format:', data);
+        toast({
+          title: 'Error loading documents',
+          description: 'The documents data format is invalid',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        setDocuments([]);
+        return;
+      }
+      
+      const docsWithDuplicates = identifyPossibleDuplicates(data.documents);
+      setDocuments(docsWithDuplicates);
     } catch (error) {
       console.error('Error fetching documents:', error);
+      toast({
+        title: 'Error loading documents',
+        description: 'Failed to load documents. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      setDocuments([]);
     } finally {
       setLoading(false);
     }
@@ -130,15 +162,46 @@ const DocumentLibrary: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this document?')) {
       try {
+        console.log(`Attempting to delete document with ID: ${id}`);
         const response = await fetch(`/api/documents/${id}`, {
           method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
         
+        console.log(`Delete response status: ${response.status}`);
+        
         if (response.ok) {
+          console.log(`Successfully deleted document with ID: ${id}`);
           setDocuments(documents.filter(doc => doc.id !== id));
+          toast({
+            title: 'Document deleted',
+            description: 'Document was successfully deleted',
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          });
+        } else {
+          const errorText = await response.text();
+          console.error(`Error deleting document: ${errorText}`);
+          toast({
+            title: 'Error',
+            description: 'Failed to delete document',
+            status: 'error',
+            duration: 3000,
+            isClosable: true,
+          });
         }
       } catch (error) {
         console.error('Error deleting document:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to delete document',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
       }
     }
   };
