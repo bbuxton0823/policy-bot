@@ -16,9 +16,14 @@ import {
   FormControl,
   FormLabel,
   Tooltip,
-  IconButton
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  MenuDivider
 } from '@chakra-ui/react';
-import { FiSend, FiUpload, FiFile, FiGlobe, FiInfo } from 'react-icons/fi';
+import { FiSend, FiUpload, FiFile, FiGlobe, FiInfo, FiSave, FiList, FiTrash2, FiRefreshCw, FiSearch } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 
 interface Source {
@@ -31,10 +36,21 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   sources?: Source[];
+  webSearchEnabled?: boolean;
 }
 
 interface PolicyChatProps {
   vectorStoreId: string | null;
+}
+
+const THREAD_STORAGE_KEY = 'policy_chat_threads';
+
+interface SavedThread {
+  id: string;
+  name: string;
+  lastMessage: string;
+  timestamp: number;
+  messages: Message[];
 }
 
 const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
@@ -46,9 +62,28 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
   const [useWebSearch, setUseWebSearch] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [savedThreads, setSavedThreads] = useState<SavedThread[]>([]);
+  const [threadName, setThreadName] = useState<string>('');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
+  
+  // Load saved threads from localStorage
+  useEffect(() => {
+    const loadSavedThreads = () => {
+      const savedThreadsJson = localStorage.getItem(THREAD_STORAGE_KEY);
+      if (savedThreadsJson) {
+        try {
+          const threads = JSON.parse(savedThreadsJson);
+          setSavedThreads(threads);
+        } catch (error) {
+          console.error('Error parsing saved threads:', error);
+        }
+      }
+    };
+    
+    loadSavedThreads();
+  }, []);
   
   // Create a thread when the component mounts
   useEffect(() => {
@@ -61,6 +96,7 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
         if (response.ok) {
           const data = await response.json();
           setThreadId(data.threadId);
+          setThreadName(`Chat ${new Date().toLocaleString()}`);
           
           // Add a welcome message
           setMessages([
@@ -106,7 +142,12 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
     setInput('');
     
     // Add user message to the chat
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setMessages(prev => [...prev, { 
+      role: 'user', 
+      content: userMessage,
+      // Add an indicator if web search is enabled
+      ...(useWebSearch ? { webSearchEnabled: true } : {})
+    }]);
     
     setLoading(true);
     
@@ -282,6 +323,110 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
     }
   };
   
+  const saveCurrentThread = () => {
+    if (!threadId || messages.length <= 1) {
+      toast({
+        title: 'Cannot save thread',
+        description: 'There are no messages to save in this thread.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    
+    const lastUserMessage = [...messages].reverse().find(msg => msg.role === 'user')?.content || '';
+    
+    const newThread: SavedThread = {
+      id: threadId,
+      name: threadName,
+      lastMessage: lastUserMessage,
+      timestamp: Date.now(),
+      messages: messages,
+    };
+    
+    const updatedThreads = [...savedThreads.filter(t => t.id !== threadId), newThread];
+    setSavedThreads(updatedThreads);
+    localStorage.setItem(THREAD_STORAGE_KEY, JSON.stringify(updatedThreads));
+    
+    toast({
+      title: 'Thread saved',
+      description: `Thread "${threadName}" has been saved.`,
+      status: 'success',
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+  
+  const loadThread = (thread: SavedThread) => {
+    setThreadId(thread.id);
+    setMessages(thread.messages);
+    setThreadName(thread.name);
+    
+    toast({
+      title: 'Thread loaded',
+      description: `Thread "${thread.name}" has been loaded.`,
+      status: 'success',
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+  
+  const deleteThread = (threadId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+    }
+    
+    const updatedThreads = savedThreads.filter(t => t.id !== threadId);
+    setSavedThreads(updatedThreads);
+    localStorage.setItem(THREAD_STORAGE_KEY, JSON.stringify(updatedThreads));
+    
+    toast({
+      title: 'Thread deleted',
+      status: 'info',
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+  
+  const startNewThread = async () => {
+    try {
+      const response = await fetch('/api/chat/thread', {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setThreadId(data.threadId);
+        setThreadName(`Chat ${new Date().toLocaleString()}`);
+        setMessages([
+          {
+            role: 'assistant',
+            content: 'Hello! I\'m your Policy Assistant. Ask me anything about company policies, or upload a document to chat about it.',
+          },
+        ]);
+        
+        toast({
+          title: 'New thread created',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        throw new Error('Failed to create thread');
+      }
+    } catch (error) {
+      console.error('Error creating thread:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create new thread. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+  
   return (
     <Box 
       p={6} 
@@ -324,7 +469,55 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
       )}
       
       <Flex justify="space-between" align="center" mb={4}>
-        <Text fontSize="xl" fontWeight="bold">Policy Chat</Text>
+        <HStack>
+          <Text fontSize="xl" fontWeight="bold">{threadName}</Text>
+          <Menu>
+            <MenuButton
+              as={IconButton}
+              aria-label="Thread options"
+              icon={<FiList />}
+              variant="ghost"
+              size="sm"
+            />
+            <MenuList>
+              <MenuItem icon={<FiSave />} onClick={saveCurrentThread}>
+                Save Current Thread
+              </MenuItem>
+              <MenuItem icon={<FiRefreshCw />} onClick={startNewThread}>
+                Start New Thread
+              </MenuItem>
+              {savedThreads.length > 0 && <MenuDivider />}
+              {savedThreads.map(thread => (
+                <MenuItem 
+                  key={thread.id} 
+                  onClick={() => loadThread(thread)}
+                  position="relative"
+                  pr="40px"
+                >
+                  <Box>
+                    <Text fontWeight="medium">{thread.name}</Text>
+                    <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                      {thread.lastMessage || 'No messages'}
+                    </Text>
+                    <Text fontSize="xs" color="gray.400">
+                      {new Date(thread.timestamp).toLocaleString()}
+                    </Text>
+                  </Box>
+                  <IconButton
+                    aria-label="Delete thread"
+                    icon={<FiTrash2 />}
+                    size="xs"
+                    position="absolute"
+                    right="8px"
+                    top="50%"
+                    transform="translateY(-50%)"
+                    onClick={(e) => deleteThread(thread.id, e)}
+                  />
+                </MenuItem>
+              ))}
+            </MenuList>
+          </Menu>
+        </HStack>
         <HStack spacing={4}>
           {activeVectorStoreId && (
             <Tooltip label="This chat is using a vector store to search through your documents">
@@ -338,13 +531,31 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
             <FormLabel htmlFor="web-search" mb="0" fontSize="sm">
               Web Search
             </FormLabel>
-            <Tooltip label="Enable to search the web for current information">
-              <Switch 
-                id="web-search" 
-                colorScheme="blue"
-                isChecked={useWebSearch}
-                onChange={(e) => setUseWebSearch(e.target.checked)}
-              />
+            <Tooltip label={useWebSearch ? "Web search is enabled - I'll search the internet for current information" : "Enable to search the web for current information"}>
+              <Box position="relative">
+                <Switch 
+                  id="web-search" 
+                  colorScheme="blue"
+                  isChecked={useWebSearch}
+                  onChange={(e) => setUseWebSearch(e.target.checked)}
+                />
+                {useWebSearch && (
+                  <Box 
+                    position="absolute" 
+                    top="-8px" 
+                    right="-8px" 
+                    bg="blue.500" 
+                    borderRadius="full" 
+                    w="16px" 
+                    h="16px" 
+                    display="flex" 
+                    alignItems="center" 
+                    justifyContent="center"
+                  >
+                    <FiSearch size="10px" color="white" />
+                  </Box>
+                )}
+              </Box>
             </Tooltip>
           </FormControl>
           <Tooltip label="Upload policy documents">
@@ -400,7 +611,26 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
             borderRadius="lg"
             bg={msg.role === 'user' ? 'blue.500' : 'gray.100'}
             color={msg.role === 'user' ? 'white' : 'black'}
+            position="relative"
           >
+            {/* Add web search indicator for user messages */}
+            {msg.role === 'user' && msg.webSearchEnabled && (
+              <Box 
+                position="absolute" 
+                top="-8px" 
+                right="-8px" 
+                bg="blue.200" 
+                borderRadius="full" 
+                w="20px" 
+                h="20px" 
+                display="flex" 
+                alignItems="center" 
+                justifyContent="center"
+              >
+                <FiGlobe size="12px" color="blue.800" />
+              </Box>
+            )}
+            
             <ReactMarkdown>{msg.content}</ReactMarkdown>
             
             {msg.sources && msg.sources.length > 0 && (
