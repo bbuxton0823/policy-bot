@@ -1,40 +1,36 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
-// In a real application, you would fetch this from a database
-// For this example, we'll use a mock list of documents
-const mockDocuments = [
-  {
-    id: '1',
-    name: 'Employee Handbook.pdf',
-    uploadedAt: '2023-12-01T10:00:00Z',
-    status: 'active',
-    version: '1.0',
-    fileType: '.pdf',
-    size: 1024 * 1024 * 2, // 2MB
-  },
-  {
-    id: '2',
-    name: 'Privacy Policy.docx',
-    uploadedAt: '2023-12-02T14:30:00Z',
-    status: 'active',
-    version: '2.1',
-    fileType: '.docx',
-    size: 1024 * 512, // 512KB
-  },
-  {
-    id: '3',
-    name: 'Security Guidelines.txt',
-    uploadedAt: '2023-12-03T09:15:00Z',
-    status: 'archived',
-    version: '1.5',
-    fileType: '.txt',
-    size: 1024 * 100, // 100KB
+// File path for storing document metadata
+const DOCUMENTS_FILE_PATH = path.join(process.cwd(), 'documents.json');
+
+// Function to read documents from file
+function readDocumentsFromFile(): any[] {
+  try {
+    if (fs.existsSync(DOCUMENTS_FILE_PATH)) {
+      const data = fs.readFileSync(DOCUMENTS_FILE_PATH, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error reading documents file:', error);
   }
-];
+  return [];
+}
+
+// Function to write documents to file
+function writeDocumentsToFile(documents: any[]): void {
+  try {
+    fs.writeFileSync(DOCUMENTS_FILE_PATH, JSON.stringify(documents, null, 2), 'utf8');
+  } catch (error) {
+    console.error('Error writing documents file:', error);
+  }
+}
 
 export async function GET() {
-  // In a real application, you would fetch documents from a database
-  return NextResponse.json({ documents: mockDocuments });
+  // Read documents from file
+  const documents = readDocumentsFromFile();
+  return NextResponse.json({ documents });
 }
 
 export async function DELETE(request: Request) {
@@ -48,8 +44,14 @@ export async function DELETE(request: Request) {
     );
   }
   
-  // In a real application, you would delete the document from your database
-  // and remove its vectors from Pinecone
+  // Read current documents
+  const documents = readDocumentsFromFile();
+  
+  // Filter out the document to delete
+  const updatedDocuments = documents.filter(doc => doc.id !== id);
+  
+  // Write updated documents back to file
+  writeDocumentsToFile(updatedDocuments);
   
   return NextResponse.json({ success: true });
 } 

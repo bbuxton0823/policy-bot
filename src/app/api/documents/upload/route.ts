@@ -14,6 +14,31 @@ const openai = new OpenAI({
 // Get the assistant ID from environment variables
 const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
 
+// File path for storing document metadata
+const DOCUMENTS_FILE_PATH = path.join(process.cwd(), 'documents.json');
+
+// Function to read documents from file
+function readDocumentsFromFile(): any[] {
+  try {
+    if (fs.existsSync(DOCUMENTS_FILE_PATH)) {
+      const data = fs.readFileSync(DOCUMENTS_FILE_PATH, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error reading documents file:', error);
+  }
+  return [];
+}
+
+// Function to write documents to file
+function writeDocumentsToFile(documents: any[]): void {
+  try {
+    fs.writeFileSync(DOCUMENTS_FILE_PATH, JSON.stringify(documents, null, 2), 'utf8');
+  } catch (error) {
+    console.error('Error writing documents file:', error);
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     console.log('Document upload request received');
@@ -95,8 +120,7 @@ export async function POST(req: NextRequest) {
             openaiFileId: uploadedFile.id,
           };
           
-          // Here you would store docMetadata in your database
-          // For this example, we'll just return it
+          // Add document to our processed docs list
           processedDocs.push(docMetadata);
           console.log(`Document metadata created for: ${file.name}`);
         } catch (fileError: any) {
@@ -130,6 +154,11 @@ export async function POST(req: NextRequest) {
         }
       });
       console.log('Assistant updated with vector store');
+      
+      // Save the processed documents to our file storage
+      const existingDocuments = readDocumentsFromFile();
+      const updatedDocuments = [...existingDocuments, ...processedDocs];
+      writeDocumentsToFile(updatedDocuments);
       
       console.log('Document upload completed successfully');
       return NextResponse.json({ 

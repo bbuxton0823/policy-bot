@@ -68,6 +68,20 @@ A modern, AI-powered chatbot application that allows users to upload policy docu
    OPENAI_ASSISTANT_ID=your_assistant_id
    ```
 
+5. (Optional) Set up Google Custom Search API for web search functionality:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project
+   - Enable the "Custom Search API"
+   - Create API credentials and get your API key
+   - Go to [Google Programmable Search Engine](https://programmablesearchengine.google.com/about/)
+   - Create a new search engine
+   - Get your Search Engine ID (cx)
+   - Add these to your `.env.local` file:
+   ```
+   GOOGLE_API_KEY=your_google_api_key
+   GOOGLE_CSE_ID=your_google_custom_search_engine_id
+   ```
+
 ### Running the Application
 
 Start the development server:
@@ -155,7 +169,12 @@ policy-bot/
 - **Upload Issues**: Ensure your documents are in PDF, Word, or text format
 - **Chat Not Working**: Check that your OpenAI API key has access to the Assistants API
 - **No Responses**: Verify that your Assistant ID is correctly set in the .env.local file
-- **Web Search Not Working**: Confirm that your OpenAI API key has access to the web search tool
+- **Web Search Not Working**: 
+  - Confirm that you've set up Google Custom Search API correctly
+  - Check that both GOOGLE_API_KEY and GOOGLE_CSE_ID are in your .env.local file
+  - Verify that your Google API key has the Custom Search API enabled
+  - Make sure your search engine is configured to search the entire web
+  - If you don't set up Google API, the app will use simulated web search responses
 
 ## License
 

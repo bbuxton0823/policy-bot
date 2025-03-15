@@ -21,14 +21,16 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
-  MenuDivider
+  MenuDivider,
+  Image
 } from '@chakra-ui/react';
-import { FiSend, FiUpload, FiFile, FiGlobe, FiInfo, FiSave, FiList, FiTrash2, FiRefreshCw, FiSearch } from 'react-icons/fi';
+import { FiSend, FiUpload, FiFile, FiGlobe, FiInfo, FiSave, FiList, FiTrash2, FiRefreshCw, FiSearch, FiExternalLink } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 
 interface Source {
   document: string;
   section: string;
+  description?: string;
   type?: 'file' | 'web';
 }
 
@@ -37,6 +39,8 @@ interface Message {
   content: string;
   sources?: Source[];
   webSearchEnabled?: boolean;
+  hasChartImage?: boolean;
+  chartImageUrl?: string;
 }
 
 interface PolicyChatProps {
@@ -175,6 +179,8 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
             role: 'assistant',
             content: data.message.content,
             sources: data.message.sources,
+            hasChartImage: data.message.hasChartImage,
+            chartImageUrl: data.message.chartImageUrl
           },
         ]);
       } else {
@@ -470,7 +476,7 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
       
       <Flex justify="space-between" align="center" mb={4}>
         <HStack>
-          <Text fontSize="xl" fontWeight="bold">{threadName}</Text>
+          <Text fontSize="xl" fontWeight="bold" color="gray.800" _dark={{ color: "white" }}>{threadName}</Text>
           <Menu>
             <MenuButton
               as={IconButton}
@@ -496,10 +502,10 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
                 >
                   <Box>
                     <Text fontWeight="medium">{thread.name}</Text>
-                    <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                    <Text fontSize="xs" color="gray.500" _dark={{ color: "gray.300" }} noOfLines={1}>
                       {thread.lastMessage || 'No messages'}
                     </Text>
-                    <Text fontSize="xs" color="gray.400">
+                    <Text fontSize="xs" color="gray.400" _dark={{ color: "gray.300" }}>
                       {new Date(thread.timestamp).toLocaleString()}
                     </Text>
                   </Box>
@@ -528,7 +534,7 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
             </Tooltip>
           )}
           <FormControl display="flex" alignItems="center" width="auto">
-            <FormLabel htmlFor="web-search" mb="0" fontSize="sm">
+            <FormLabel htmlFor="web-search" mb="0" fontSize="sm" fontWeight="medium" color="gray.700" _dark={{ color: "white" }}>
               Web Search
             </FormLabel>
             <Tooltip label={useWebSearch ? "Web search is enabled - I'll search the internet for current information" : "Enable to search the web for current information"}>
@@ -538,6 +544,18 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
                   colorScheme="blue"
                   isChecked={useWebSearch}
                   onChange={(e) => setUseWebSearch(e.target.checked)}
+                  sx={{
+                    ".chakra-switch__track": {
+                      _dark: {
+                        bg: "gray.600"
+                      }
+                    },
+                    ".chakra-switch__thumb": {
+                      _dark: {
+                        bg: "white"
+                      }
+                    }
+                  }}
                 />
                 {useWebSearch && (
                   <Box 
@@ -551,6 +569,10 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
                     display="flex" 
                     alignItems="center" 
                     justifyContent="center"
+                    boxShadow="0 0 0 2px white"
+                    _dark={{
+                      boxShadow: "0 0 0 2px var(--chakra-colors-gray-700)"
+                    }}
                   >
                     <FiSearch size="10px" color="white" />
                   </Box>
@@ -626,31 +648,89 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
                 display="flex" 
                 alignItems="center" 
                 justifyContent="center"
+                boxShadow="0 0 0 2px white"
+                _dark={{
+                  bg: "blue.400",
+                  boxShadow: "0 0 0 2px var(--chakra-colors-gray-800)",
+                  svg: { color: "white" }
+                }}
               >
-                <FiGlobe size="12px" color="blue.800" />
+                <FiGlobe size="12px" color="#1A365D" />
               </Box>
             )}
             
             <ReactMarkdown>{msg.content}</ReactMarkdown>
             
+            {/* Display chart image if available */}
+            {msg.hasChartImage && msg.chartImageUrl && (
+              <Box mt={3} borderWidth="1px" borderRadius="md" overflow="hidden">
+                <Text fontSize="xs" fontWeight="bold" p={2} bg="blue.50" _dark={{ bg: "blue.900" }}>
+                  Generated Chart
+                </Text>
+                <Image 
+                  src={`/api/images/${msg.chartImageUrl}`} 
+                  alt="Generated Chart" 
+                  maxH="300px" 
+                  mx="auto" 
+                  p={2}
+                />
+              </Box>
+            )}
+            
             {msg.sources && msg.sources.length > 0 && (
               <Box mt={2} pt={2} borderTopWidth="1px" borderTopColor="gray.200">
                 <Text fontSize="xs" fontWeight="bold" mb={1}>Sources:</Text>
                 {msg.sources.map((source, idx) => (
-                  <Flex key={idx} fontSize="xs" alignItems="center" mb={1}>
+                  <Flex key={idx} fontSize="xs" alignItems="flex-start" mb={2}>
                     {source.type === 'web' ? (
                       <>
-                        <FiGlobe size="10px" color="#4299E1" style={{ marginRight: '4px' }} />
-                        <Text as="a" href={source.document} target="_blank" color="blue.500" textDecoration="underline">
-                          {source.section}
-                        </Text>
+                        <Box 
+                          bg="blue.100" 
+                          p={1} 
+                          borderRadius="full" 
+                          mr={2}
+                          _dark={{ bg: "blue.700" }}
+                        >
+                          <FiGlobe size="10px" color="#4299E1" style={{ marginRight: '0px' }} />
+                        </Box>
+                        <Box>
+                          <Text as="a" href={source.document} target="_blank" color="blue.500" textDecoration="underline" fontWeight="medium">
+                            {source.section} <FiExternalLink size="10px" style={{ display: 'inline', marginLeft: '2px' }} />
+                          </Text>
+                          <Text color="blue.600" fontSize="10px" fontWeight="medium" mb="2px" _dark={{ color: "blue.200" }}>
+                            Web Source
+                          </Text>
+                          {source.description && (
+                            <Text color="gray.500" fontSize="10px" mt="2px" _dark={{ color: "gray.300" }}>
+                              {source.description}
+                            </Text>
+                          )}
+                        </Box>
                       </>
                     ) : (
                       <>
-                        <FiFile size="10px" color="#48BB78" style={{ marginRight: '4px' }} />
-                        <Text>
-                          {source.document}: {source.section}
-                        </Text>
+                        <Box 
+                          bg="green.100" 
+                          p={1} 
+                          borderRadius="full" 
+                          mr={2}
+                          _dark={{ bg: "green.700" }}
+                        >
+                          <FiFile size="10px" color="#48BB78" style={{ marginRight: '0px' }} />
+                        </Box>
+                        <Box>
+                          <Text fontWeight="medium">
+                            {source.document}
+                          </Text>
+                          <Text color="green.600" fontSize="10px" fontWeight="medium" mb="2px" _dark={{ color: "green.200" }}>
+                            Document Source
+                          </Text>
+                          {source.description && (
+                            <Text color="gray.500" fontSize="10px" mt="2px" noOfLines={2} _dark={{ color: "gray.300" }}>
+                              {source.description}
+                            </Text>
+                          )}
+                        </Box>
                       </>
                     )}
                   </Flex>
@@ -668,7 +748,18 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-          disabled={loading || !threadId}
+          disabled={loading}
+          size="md"
+          flex="1"
+          mr={2}
+          color="black"
+          bg="white"
+          _dark={{
+            color: "white",
+            bg: "gray.700",
+            borderColor: "gray.600",
+            _placeholder: { color: "gray.300" }
+          }}
         />
         <Button
           colorScheme="blue"

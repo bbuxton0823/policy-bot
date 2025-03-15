@@ -13,6 +13,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadComplete }) => 
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const toast = useToast();
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,6 +75,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadComplete }) => 
     
     setUploading(true);
     setProgress(0);
+    setUploadedFiles([]);
     
     const formData = new FormData();
     files.forEach(file => {
@@ -81,13 +83,27 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadComplete }) => 
     });
     
     try {
+      // Start progress simulation
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          const newProgress = prev + (Math.random() * 5);
+          return newProgress >= 95 ? 95 : newProgress;
+        });
+      }, 500);
+      
       const response = await fetch('/api/documents/upload', {
         method: 'POST',
         body: formData,
       });
       
+      clearInterval(progressInterval);
+      setProgress(100);
+      
       if (response.ok) {
         const result = await response.json();
+        // Add uploaded files to the list
+        setUploadedFiles(result.documents.map((doc: any) => doc.name));
+        
         toast({
           title: 'Documents uploaded successfully',
           description: `${result.documents.length} document(s) processed and added to the vector store`,
@@ -109,13 +125,16 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadComplete }) => 
         isClosable: true,
       });
     } finally {
-      setUploading(false);
-      setFiles([]);
+      // Keep uploading state for a moment to show 100% progress
+      setTimeout(() => {
+        setUploading(false);
+        setFiles([]);
+      }, 1000);
     }
   };
   
   return (
-    <Box p={6} borderWidth="1px" borderRadius="lg" bg="white" shadow="md">
+    <Box p={6} borderWidth="1px" borderRadius="lg" bg="white" shadow="md" _dark={{ bg: "gray.800" }}>
       <VStack spacing={4} align="stretch">
         <Text fontSize="xl" fontWeight="bold">Upload Policy Documents</Text>
         
@@ -129,6 +148,11 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadComplete }) => 
           textAlign="center"
           cursor="pointer"
           _hover={{ bg: isDragging ? "blue.50" : "gray.100" }}
+          _dark={{
+            borderColor: isDragging ? "blue.400" : "gray.600",
+            bg: isDragging ? "blue.900" : "gray.700",
+            _hover: { bg: isDragging ? "blue.900" : "gray.600" }
+          }}
           onClick={() => document.getElementById('file-input')?.click()}
           onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
@@ -165,7 +189,39 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadComplete }) => 
           </Box>
         )}
         
-        {uploading && <Progress value={progress} size="sm" colorScheme="blue" />}
+        {uploading && (
+          <Box>
+            <Progress 
+              value={progress} 
+              size="sm" 
+              colorScheme="blue" 
+              hasStripe={progress < 100}
+              isAnimated={progress < 100}
+              mb={2}
+            />
+            <Text fontSize="sm" color="gray.600" _dark={{ color: "gray.300" }}>
+              {progress < 100 ? 'Processing documents...' : 'Upload complete!'}
+            </Text>
+          </Box>
+        )}
+        
+        {uploadedFiles.length > 0 && !uploading && (
+          <Box mt={2} p={3} bg="green.50" borderRadius="md" _dark={{ bg: "green.900" }}>
+            <Flex align="center" mb={2}>
+              <FiCheckCircle color="green" />
+              <Text ml={2} fontWeight="medium" color="green.600" _dark={{ color: "green.200" }}>
+                Successfully uploaded:
+              </Text>
+            </Flex>
+            <VStack align="stretch" maxH="100px" overflowY="auto">
+              {uploadedFiles.map((filename, index) => (
+                <Text key={index} fontSize="sm" color="green.600" _dark={{ color: "green.200" }}>
+                  • {filename}
+                </Text>
+              ))}
+            </VStack>
+          </Box>
+        )}
         
         <Button 
           leftIcon={uploading ? undefined : <FiUpload />}

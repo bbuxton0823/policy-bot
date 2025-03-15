@@ -38,7 +38,7 @@ export default function Home() {
         <Tabs variant="enclosed" colorScheme="blue" borderColor="sanMateo.blue">
           <TabList>
             <Tab _selected={{ color: 'white', bg: 'sanMateo.blue' }}>Chat</Tab>
-            <Tab _selected={{ color: 'white', bg: 'sanMateo.blue' }}>Documents</Tab>
+            <Tab _selected={{ color: 'white', bg: 'sanMateo.blue' }}>Documents Library</Tab>
             <Tab _selected={{ color: 'white', bg: 'sanMateo.blue' }}>Upload</Tab>
           </TabList>
           

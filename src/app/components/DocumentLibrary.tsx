@@ -34,7 +34,13 @@ const DocumentLibrary: React.FC = () => {
   const fetchDocuments = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/documents');
+      const response = await fetch('/api/documents', {
+        cache: 'no-store',
+        headers: {
+          'pragma': 'no-cache',
+          'cache-control': 'no-cache'
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setDocuments(data.documents);
@@ -81,9 +87,9 @@ const DocumentLibrary: React.FC = () => {
   };
 
   return (
-    <Box p={6} borderWidth="1px" borderRadius="lg" bg="white" shadow="md">
+    <Box p={6} borderWidth="1px" borderRadius="lg" bg="white" shadow="md" _dark={{ bg: "gray.800" }}>
       <Flex mb={4} align="center">
-        <Text fontSize="xl" fontWeight="bold">Policy Documents</Text>
+        <Text fontSize="xl" fontWeight="bold">Policy Documents Library</Text>
         <Spacer />
         <IconButton
           icon={<FiRefreshCw />}
@@ -99,43 +105,69 @@ const DocumentLibrary: React.FC = () => {
           <Text>No documents uploaded yet</Text>
         </Box>
       ) : (
-        <Table variant="simple">
-          <Thead>
-            <Tr>
-              <Th>Document Name</Th>
-              <Th>Upload Date</Th>
-              <Th>Status</Th>
-              <Th>Version</Th>
-              <Th>Actions</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {documents.map((doc) => (
-              <Tr key={doc.id}>
-                <Td>{doc.name}</Td>
-                <Td>{new Date(doc.uploadedAt).toLocaleDateString()}</Td>
-                <Td>{getStatusBadge(doc.status)}</Td>
-                <Td>{doc.version || '1.0'}</Td>
-                <Td>
-                  <IconButton
-                    icon={<FiEye />}
-                    aria-label="View document details"
-                    size="sm"
-                    mr={2}
-                    onClick={() => handleViewDetails(doc)}
-                  />
-                  <IconButton
-                    icon={<FiTrash2 />}
-                    aria-label="Delete document"
-                    size="sm"
-                    colorScheme="red"
-                    onClick={() => handleDelete(doc.id)}
-                  />
-                </Td>
+        <Box 
+          maxH="400px" 
+          overflowY="auto" 
+          overflowX="auto" 
+          borderWidth="1px" 
+          borderRadius="md"
+          css={{
+            '&::-webkit-scrollbar': {
+              width: '8px',
+              height: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              width: '10px',
+              background: '#f1f1f1',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#CBD5E0',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb:hover': {
+              background: '#A0AEC0',
+            },
+          }}
+        >
+          <Table variant="simple">
+            <Thead position="sticky" top={0} bg="white" zIndex={1} boxShadow="sm" _dark={{ bg: "gray.700" }}>
+              <Tr>
+                <Th>Document Name</Th>
+                <Th>Upload Date</Th>
+                <Th>Status</Th>
+                <Th>Version</Th>
+                <Th>Actions</Th>
               </Tr>
-            ))}
-          </Tbody>
-        </Table>
+            </Thead>
+            <Tbody>
+              {documents.map((doc) => (
+                <Tr key={doc.id} _dark={{ bg: "gray.800", _hover: { bg: "gray.700" } }}>
+                  <Td>{doc.name}</Td>
+                  <Td>{new Date(doc.uploadedAt).toLocaleDateString()}</Td>
+                  <Td>{getStatusBadge(doc.status)}</Td>
+                  <Td>{doc.version || '1.0'}</Td>
+                  <Td>
+                    <IconButton
+                      icon={<FiEye />}
+                      aria-label="View document details"
+                      size="sm"
+                      mr={2}
+                      onClick={() => handleViewDetails(doc)}
+                    />
+                    <IconButton
+                      icon={<FiTrash2 />}
+                      aria-label="Delete document"
+                      size="sm"
+                      colorScheme="red"
+                      onClick={() => handleDelete(doc.id)}
+                    />
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </Box>
       )}
 
       <Modal isOpen={isOpen} onClose={onClose} size="lg">

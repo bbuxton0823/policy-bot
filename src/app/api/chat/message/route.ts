@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { performWebSearch } from '../../utils/webSearch';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -7,6 +8,42 @@ const openai = new OpenAI({
 
 // Get the assistant ID from environment variables
 const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
+
+// In-memory cache for file ID to document name mapping
+// In a real app, this would be stored in a database
+const fileIdToDocumentMap = new Map<string, string>();
+
+// Function to get file metadata and update the map
+async function getFileMetadata(fileId: string): Promise<string> {
+  // Check if we already have this file in our map
+  if (fileIdToDocumentMap.has(fileId)) {
+    return fileIdToDocumentMap.get(fileId) || fileId;
+  }
+  
+  try {
+    // Get file metadata from OpenAI
+    const file = await openai.files.retrieve(fileId);
+    const fileName = file.filename || fileId;
+    
+    // Store in our map for future use
+    fileIdToDocumentMap.set(fileId, fileName);
+    return fileName;
+  } catch (error) {
+    console.error(`Error retrieving file metadata for ${fileId}:`, error);
+    return fileId; // Fallback to the file ID if we can't get the name
+  }
+}
+
+// Function to create a brief description of the document section
+function createBriefDescription(quote: string): string {
+  if (!quote) return 'N/A';
+  
+  // Limit to 140 characters and add ellipsis if needed
+  const maxLength = 140;
+  if (quote.length <= maxLength) return quote;
+  
+  return quote.substring(0, maxLength - 3) + '...';
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -56,9 +93,29 @@ export async function POST(req: NextRequest) {
       tools.push({ type: "file_search" });
     }
     
-    // Add web search if enabled
+    // Add code_interpreter for chart creation
+    tools.push({ type: "code_interpreter" });
+    
+    // For web search, we need to use a function tool instead of 'web_search'
     if (useWebSearch) {
-      tools.push({ type: "web_search" });
+      // Add a custom function for web search
+      tools.push({
+        type: "function",
+        function: {
+          name: "search_web",
+          description: "Search the web for current information",
+          parameters: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "The search query"
+              }
+            },
+            required: ["query"]
+          }
+        }
+      });
     }
     
     // Only set tools if we have any
@@ -82,14 +139,43 @@ export async function POST(req: NextRequest) {
       
       // Handle case where more information is needed
       if (runStatus.status === 'requires_action') {
-        // This is where you would handle tool calls
-        // For this example, we'll just return a message asking for more information
-        return NextResponse.json({
-          message: {
-            content: "I need more information to answer your question. Could you please provide additional details?",
-            sources: []
+        if (runStatus.required_action?.type === 'submit_tool_outputs') {
+          const toolCalls = runStatus.required_action.submit_tool_outputs.tool_calls;
+          const toolOutputs = [];
+          
+          for (const toolCall of toolCalls) {
+            if (toolCall.function.name === 'search_web') {
+              try {
+                // Parse the query
+                const args = JSON.parse(toolCall.function.arguments);
+                const query = args.query;
+                
+                // Use our web search utility to get real search results
+                const searchResults = await performWebSearch(query);
+                
+                toolOutputs.push({
+                  tool_call_id: toolCall.id,
+                  output: searchResults
+                });
+              } catch (error) {
+                console.error('Error processing web search:', error);
+                toolOutputs.push({
+                  tool_call_id: toolCall.id,
+                  output: "Error performing web search. Please try again."
+                });
+              }
+            }
           }
-        });
+          
+          // Submit the tool outputs back to the assistant
+          if (toolOutputs.length > 0) {
+            await openai.beta.threads.runs.submitToolOutputs(
+              threadId,
+              runStatus.id,
+              { tool_outputs: toolOutputs }
+            );
+          }
+        }
       }
     }
     
@@ -109,40 +195,58 @@ export async function POST(req: NextRequest) {
     }
     
     // Extract sources from annotations if they exist
-    let sources = [];
+    let sources: Array<{document: string, section: string, type?: string, description?: string} | null> = [];
     let content = '';
+    let hasChartImage = false;
+    let chartImageUrl = '';
     
     if (assistantMessage.content && assistantMessage.content.length > 0) {
+      // Check for image content (charts from code interpreter)
+      const imageContent = assistantMessage.content.find(item => item.type === 'image_file');
+      if (imageContent && 'image_file' in imageContent) {
+        hasChartImage = true;
+        chartImageUrl = imageContent.image_file.file_id;
+      }
+      
       const textContent = assistantMessage.content.find(item => item.type === 'text');
       
       if (textContent && 'text' in textContent) {
         content = textContent.text.value;
         
         if (textContent.text.annotations) {
-          sources = textContent.text.annotations
-            .filter(annotation => {
-              // Include both file citations and web search citations
-              return annotation.type === 'file_citation' || annotation.type === 'web_search_result';
-            })
-            .map(annotation => {
-              if ('file_citation' in annotation) {
+          // Process annotations and get file names
+          const annotationsWithPromises = textContent.text.annotations
+            .map(async annotation => {
+              if (annotation.type === 'file_citation' && 'file_citation' in annotation) {
                 const citedFile = annotation.file_citation;
+                const fileId = citedFile.file_id;
+                const quote = (citedFile as any).quote || 'N/A';
+                
+                // Get the document name for this file ID
+                const documentName = await getFileMetadata(fileId);
+                const briefDescription = createBriefDescription(quote);
+                
                 return {
-                  document: citedFile.file_id, // You'd map this to a document name
-                  section: `Page ${citedFile.quote || 'N/A'}`,
+                  document: documentName, // Use the actual document name
+                  section: quote,
+                  description: briefDescription,
                   type: 'file'
                 };
-              } else if ('web_search_result' in annotation) {
-                const webResult = annotation.web_search_result;
+              } else if (useWebSearch && annotation.type === 'file_path' && 'file_path' in annotation) {
+                // This could be a web search result
                 return {
-                  document: webResult.url || 'Web Source',
-                  section: webResult.title || 'Web Result',
+                  document: annotation.file_path.file_id,
+                  section: 'Web Search Result',
+                  description: 'Information retrieved from the web',
                   type: 'web'
                 };
               }
               return null;
             })
-            .filter(Boolean);
+            .filter(item => item !== null);
+          
+          // Wait for all the file metadata lookups to complete
+          sources = await Promise.all(annotationsWithPromises);
         }
       }
     }
@@ -150,7 +254,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       message: {
         content,
-        sources
+        sources,
+        hasChartImage,
+        chartImageUrl
       }
     });
     
