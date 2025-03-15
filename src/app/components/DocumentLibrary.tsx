@@ -6,9 +6,9 @@ import {
   Badge, IconButton, Text, Flex, Spacer, 
   useDisclosure, Modal, ModalOverlay, 
   ModalContent, ModalHeader, ModalBody, 
-  ModalFooter, Button
+  ModalFooter, Button, Tooltip
 } from '@chakra-ui/react';
-import { FiTrash2, FiEye, FiRefreshCw } from 'react-icons/fi';
+import { FiTrash2, FiEye, FiRefreshCw, FiAlertTriangle } from 'react-icons/fi';
 
 interface Document {
   id: string;
@@ -19,6 +19,8 @@ interface Document {
   fileType?: string;
   size?: number;
   sections?: Array<{ title: string }>;
+  possibleDuplicate?: boolean;
+  duplicateGroupId?: string;
 }
 
 const DocumentLibrary: React.FC = () => {
@@ -43,13 +45,59 @@ const DocumentLibrary: React.FC = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        setDocuments(data.documents);
+        const docsWithDuplicates = identifyPossibleDuplicates(data.documents);
+        setDocuments(docsWithDuplicates);
       }
     } catch (error) {
       console.error('Error fetching documents:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Function to identify possible duplicates based on similar names
+  const identifyPossibleDuplicates = (docs: Document[]): Document[] => {
+    // Create a map to group documents by normalized name
+    const nameGroups: Record<string, Document[]> = {};
+    
+    // Helper function to normalize document names for comparison
+    const normalizeName = (name: string): string => {
+      return name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '') // Remove non-alphanumeric characters
+        .trim();
+    };
+    
+    // Group documents by normalized name
+    docs.forEach(doc => {
+      const normalizedName = normalizeName(doc.name);
+      if (!nameGroups[normalizedName]) {
+        nameGroups[normalizedName] = [];
+      }
+      nameGroups[normalizedName].push(doc);
+    });
+    
+    // Mark documents as possible duplicates if they belong to a group with more than one document
+    let duplicateGroupCounter = 0;
+    const enhancedDocs = [...docs];
+    
+    Object.entries(nameGroups).forEach(([normalizedName, group]) => {
+      if (group.length > 1) {
+        const groupId = `duplicate-group-${duplicateGroupCounter++}`;
+        group.forEach(doc => {
+          const docIndex = enhancedDocs.findIndex(d => d.id === doc.id);
+          if (docIndex !== -1) {
+            enhancedDocs[docIndex] = {
+              ...enhancedDocs[docIndex],
+              possibleDuplicate: true,
+              duplicateGroupId: groupId
+            };
+          }
+        });
+      }
+    });
+    
+    return enhancedDocs;
   };
 
   const handleDelete = async (id: string) => {
@@ -84,6 +132,14 @@ const DocumentLibrary: React.FC = () => {
       default:
         return <Badge>Unknown</Badge>;
     }
+  };
+
+  // Get all documents that are in the same duplicate group as the current document
+  const getDuplicatesForDocument = (doc: Document): Document[] => {
+    if (!doc.possibleDuplicate || !doc.duplicateGroupId) return [];
+    return documents.filter(
+      d => d.id !== doc.id && d.duplicateGroupId === doc.duplicateGroupId
+    );
   };
 
   return (
@@ -141,30 +197,55 @@ const DocumentLibrary: React.FC = () => {
               </Tr>
             </Thead>
             <Tbody>
-              {documents.map((doc) => (
-                <Tr key={doc.id} _dark={{ bg: "gray.800", _hover: { bg: "gray.700" } }}>
-                  <Td>{doc.name}</Td>
-                  <Td>{new Date(doc.uploadedAt).toLocaleDateString()}</Td>
-                  <Td>{getStatusBadge(doc.status)}</Td>
-                  <Td>{doc.version || '1.0'}</Td>
-                  <Td>
-                    <IconButton
-                      icon={<FiEye />}
-                      aria-label="View document details"
-                      size="sm"
-                      mr={2}
-                      onClick={() => handleViewDetails(doc)}
-                    />
-                    <IconButton
-                      icon={<FiTrash2 />}
-                      aria-label="Delete document"
-                      size="sm"
-                      colorScheme="red"
-                      onClick={() => handleDelete(doc.id)}
-                    />
-                  </Td>
-                </Tr>
-              ))}
+              {documents.map((doc) => {
+                const duplicates = getDuplicatesForDocument(doc);
+                return (
+                  <Tr 
+                    key={doc.id} 
+                    _dark={{ 
+                      bg: doc.possibleDuplicate ? "yellow.900" : "gray.800", 
+                      _hover: { bg: "gray.700" } 
+                    }}
+                    bg={doc.possibleDuplicate ? "yellow.50" : undefined}
+                  >
+                    <Td>
+                      <Flex align="center">
+                        {doc.name}
+                        {doc.possibleDuplicate && (
+                          <Tooltip 
+                            hasArrow 
+                            label={`Possible duplicate${duplicates.length > 1 ? 's' : ''}: ${duplicates.map(d => d.name).join(', ')}`}
+                            placement="top"
+                          >
+                            <Box ml={2} color="orange.500">
+                              <FiAlertTriangle />
+                            </Box>
+                          </Tooltip>
+                        )}
+                      </Flex>
+                    </Td>
+                    <Td>{new Date(doc.uploadedAt).toLocaleDateString()}</Td>
+                    <Td>{getStatusBadge(doc.status)}</Td>
+                    <Td>{doc.version || '1.0'}</Td>
+                    <Td>
+                      <IconButton
+                        icon={<FiEye />}
+                        aria-label="View document details"
+                        size="sm"
+                        mr={2}
+                        onClick={() => handleViewDetails(doc)}
+                      />
+                      <IconButton
+                        icon={<FiTrash2 />}
+                        aria-label="Delete document"
+                        size="sm"
+                        colorScheme="red"
+                        onClick={() => handleDelete(doc.id)}
+                      />
+                    </Td>
+                  </Tr>
+                );
+              })}
             </Tbody>
           </Table>
         </Box>
@@ -183,6 +264,25 @@ const DocumentLibrary: React.FC = () => {
                 <Text><strong>Version:</strong> {selectedDoc.version || '1.0'}</Text>
                 <Text><strong>File Type:</strong> {selectedDoc.fileType}</Text>
                 <Text><strong>Size:</strong> {selectedDoc.size ? Math.round(selectedDoc.size / 1024) : 0} KB</Text>
+                
+                {selectedDoc.possibleDuplicate && (
+                  <Box mt={4} p={3} bg="yellow.50" borderRadius="md" borderWidth="1px" borderColor="yellow.300">
+                    <Flex align="center" mb={2}>
+                      <Box color="orange.500" mr={2}>
+                        <FiAlertTriangle />
+                      </Box>
+                      <Text fontWeight="bold" color="orange.700">Possible Duplicate Documents</Text>
+                    </Flex>
+                    <Box>
+                      {getDuplicatesForDocument(selectedDoc).map((dup, idx) => (
+                        <Text key={idx} fontSize="sm" mb={1}>
+                          • {dup.name} (Uploaded: {new Date(dup.uploadedAt).toLocaleDateString()})
+                        </Text>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+                
                 {selectedDoc.sections && (
                   <Box mt={4}>
                     <Text fontWeight="bold">Document Sections:</Text>
