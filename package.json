@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "powershell -ExecutionPolicy Bypass -File scripts\\clear-documents.ps1 && next build",
     "start": "next start",
     "lint": "next lint",
-    "setup": "node scripts/setup-env.js"
+    "setup": "node scripts/setup-env.js",
+    "clear-documents": "powershell -ExecutionPolicy Bypass -File scripts\\clear-documents.ps1"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",

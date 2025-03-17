@@ -34,6 +34,13 @@ interface Source {
   section: string;
   description?: string;
   type?: 'file' | 'web';
+  citation?: string;
+  page?: string;
+  paragraph?: string;
+  chapter?: string;
+  heading?: string;
+  federalRegister?: string;
+  regulation?: string;
 }
 
 interface Message {
@@ -46,6 +53,7 @@ interface Message {
   webSearchUsed?: boolean;
   webSearchResults?: boolean;
   customChartData?: PolicyData[];
+  charts?: any[];
 }
 
 interface PolicyChatProps {
@@ -78,6 +86,7 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
   const [copiedSourcesIndex, setCopiedSourcesIndex] = useState<number | null>(null);
   const [webSearchInProgress, setWebSearchInProgress] = useState(false);
   const [copiedChartIndex, setCopiedChartIndex] = useState<number | null>(null);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const { policyData, updatePolicyData } = usePolicyChartData();
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -138,8 +147,29 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
   useEffect(() => {
     if (vectorStoreId) {
       setActiveVectorStoreId(vectorStoreId);
+      console.log('PolicyChat: Updated active vector store ID:', vectorStoreId);
     }
   }, [vectorStoreId]);
+  
+  // Add a useEffect to log when activeVectorStoreId changes
+  useEffect(() => {
+    console.log('PolicyChat: Active vector store ID changed to:', activeVectorStoreId);
+  }, [activeVectorStoreId]);
+  
+  // Add useEffect to handle sending message after thread creation
+  useEffect(() => {
+    const sendPendingMessage = async () => {
+      if (threadId && pendingMessage) {
+        console.log('Sending pending message after thread creation:', pendingMessage);
+        await handleSendMessageWithContent(pendingMessage);
+        setPendingMessage(null);
+      }
+    };
+    
+    if (threadId && pendingMessage) {
+      sendPendingMessage();
+    }
+  }, [threadId, pendingMessage]);
   
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -152,13 +182,31 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
     // Clear input field
     const userMessage = input;
     setInput('');
+    
+    await handleSendMessageWithContent(userMessage);
+  };
+  
+  const handleSendMessageWithContent = async (userMessage: string) => {
     setLoading(true);
     
     try {
       // Create a thread if we don't have one
       if (!threadId) {
-        await createThread();
-        return; // The thread creation will trigger a useEffect that will send the message
+        const newThreadId = await createThread();
+        if (newThreadId) {
+          // If we have a vector store ID, make sure it's set before sending the message
+          if (activeVectorStoreId) {
+            console.log('Using vector store ID for new thread:', activeVectorStoreId);
+          } else if (vectorStoreId) {
+            setActiveVectorStoreId(vectorStoreId);
+            console.log('Setting active vector store ID from prop:', vectorStoreId);
+          } else {
+            console.warn('No vector store ID available for new thread');
+          }
+          // Store the message to send after thread creation
+          setPendingMessage(userMessage);
+          return; // The thread creation will trigger a useEffect that will send the message
+        }
       }
       
       // Add user message to the UI immediately
@@ -225,13 +273,21 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
         return;
       }
       
+      // Process the response
       const data = await response.json();
+      
+      // Add assistant message to chat
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.content || data.message?.content || '',
+        sources: data.sources || data.message?.sources,
+        charts: data.charts || data.message?.charts,
+      };
+      
+      setMessages(prevMessages => [...prevMessages, assistantMessage]);
       
       // Reset web search in progress
       setWebSearchInProgress(false);
-      
-      // Add assistant message to the UI
-      setMessages(prevMessages => [...prevMessages, data.message]);
       
       // Scroll to bottom
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -241,14 +297,14 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
       // Add error message to chat
       const errorMessage = {
         role: 'assistant' as const,
-        content: 'I apologize for the inconvenience. It seems there is an issue with accessing the search functionality for the files you uploaded. Please check your OpenAI API key and Assistant configuration.',
+        content: 'I apologize for the inconvenience. An error occurred while processing your message. Please try again later.',
       };
       setMessages(prevMessages => [...prevMessages, errorMessage]);
       
       // Show toast with error
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        description: 'An unexpected error occurred. Please try again.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -335,18 +391,30 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
           setActiveVectorStoreId(result.vectorStoreId);
         }
         
+        // Create a more detailed success message
+        let successMessage = '';
+        if (result.documents.length === 1) {
+          successMessage = `Successfully uploaded 1 document: "${result.documents[0].name}". You can now ask questions about it!`;
+        } else {
+          successMessage = `Successfully uploaded ${result.documents.length} documents:\n`;
+          result.documents.forEach((doc: any, index: number) => {
+            successMessage += `${index + 1}. "${doc.name}"\n`;
+          });
+          successMessage += `\nYou can now ask questions about these documents!`;
+        }
+        
         // Update the last message to show success
         setMessages(prev => [
           ...prev.slice(0, -1),
           { 
             role: 'assistant', 
-            content: `Successfully uploaded ${result.documents.length} document(s). You can now ask questions about them!` 
+            content: successMessage
           }
         ]);
         
         toast({
           title: 'Documents uploaded successfully',
-          description: `${result.documents.length} document(s) processed and added to the vector store`,
+          description: `${result.documents.length} document${result.documents.length > 1 ? 's' : ''} processed and added to the vector store`,
           status: 'success',
           duration: 5000,
           isClosable: true,
@@ -573,7 +641,46 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
       if (source.type === 'web') {
         return `Web Source: ${source.section}\nURL: ${source.document}\n`;
       } else {
-        return `Document: ${source.document}\nSection: ${source.section}\n`;
+        let formattedSource = `Document: ${source.document}\n`;
+        
+        // Add all available citation details
+        if (source.chapter) {
+          formattedSource += `Chapter: ${source.chapter}\n`;
+        }
+        
+        if (source.heading) {
+          formattedSource += `Heading: ${source.heading}\n`;
+        }
+        
+        if (source.section) {
+          formattedSource += `Section: ${source.section}\n`;
+        }
+        
+        if (source.page) {
+          formattedSource += `Page: ${source.page}\n`;
+        }
+        
+        if (source.paragraph) {
+          formattedSource += `Paragraph: ${source.paragraph}\n`;
+        }
+        
+        if (source.regulation) {
+          formattedSource += `Regulation: ${source.regulation}\n`;
+        }
+        
+        if (source.federalRegister) {
+          formattedSource += `Federal Register: ${source.federalRegister}\n`;
+        }
+        
+        if (source.citation) {
+          formattedSource += `Citation: ${source.citation}\n`;
+        }
+        
+        if (source.description) {
+          formattedSource += `Description: ${source.description}\n`;
+        }
+        
+        return formattedSource;
       }
     }).join('\n');
     
@@ -588,7 +695,7 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
         }, 2000);
         
         toast({
-          title: "Sources copied to clipboard",
+          title: "Detailed sources copied to clipboard",
           status: "success",
           duration: 2000,
           isClosable: true,
@@ -718,10 +825,14 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
           borderWidth="2px"
           borderStyle="dashed"
           borderColor="blue.400"
+          _dark={{ bg: "blue.900" }}
         >
           <FiUpload size="48px" color="#4299E1" />
           <Text mt={4} fontWeight="medium">Drop your policy documents here</Text>
-          <Text fontSize="sm" color="gray.600">Supports PDF, Word, and text documents</Text>
+          <Text fontSize="sm" color="gray.600" _dark={{ color: "gray.300" }}>Supports multiple PDF, Word, and text documents</Text>
+          <Badge colorScheme="blue" mt={2} p={1}>
+            Upload multiple files at once
+          </Badge>
         </Box>
       )}
       
@@ -844,15 +955,17 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
               </Box>
             </Tooltip>
           </FormControl>
-          <Tooltip label="Upload policy documents">
-            <IconButton
-              aria-label="Upload documents"
-              icon={<FiUpload />}
-              size="sm"
-              onClick={() => document.getElementById('chat-file-input')?.click()}
-              isLoading={uploadingFile}
-            />
-          </Tooltip>
+          <FormControl>
+            <Tooltip label="Upload multiple policy documents">
+              <IconButton
+                aria-label="Upload documents"
+                icon={<FiUpload />}
+                size="sm"
+                onClick={() => document.getElementById('chat-file-input')?.click()}
+                isLoading={uploadingFile}
+              />
+            </Tooltip>
+          </FormControl>
           <input
             id="chat-file-input"
             type="file"
@@ -1114,15 +1227,120 @@ const PolicyChat: React.FC<PolicyChatProps> = ({ vectorStoreId }) => {
                         >
                           <FiFile size="10px" color="#48BB78" style={{ marginRight: '0px' }} />
                         </Box>
-                        <Box>
+                        <Box width="100%">
                           <Text fontWeight="medium">
                             {source.document}
                           </Text>
-                          <Text color="green.600" fontSize="10px" fontWeight="medium" mb="2px" _dark={{ color: "green.200" }}>
-                            Document Source
-                          </Text>
+                          <Flex justifyContent="space-between" alignItems="center" width="100%">
+                            <Text color="green.600" fontSize="10px" fontWeight="medium" mb="2px" _dark={{ color: "green.200" }}>
+                              Document Source
+                            </Text>
+                            {source.citation && (
+                              <Badge size="sm" colorScheme="green" fontSize="10px" ml={1}>
+                                {source.citation}
+                              </Badge>
+                            )}
+                          </Flex>
+                          
+                          {/* Citation details box */}
+                          {(source.section || source.page || source.paragraph || source.chapter || source.heading || source.federalRegister || source.regulation) && (
+                            <Box 
+                              mt={1} 
+                              p={2} 
+                              borderRadius="md" 
+                              bg="green.50" 
+                              borderLeft="3px solid" 
+                              borderColor="green.500"
+                              _dark={{ 
+                                bg: "green.900", 
+                                borderColor: "green.400" 
+                              }}
+                            >
+                              <Text fontSize="xs" fontWeight="bold" color="green.700" mb={1} _dark={{ color: "green.200" }}>
+                                Citation Details:
+                              </Text>
+                              
+                              {source.chapter && (
+                                <Flex align="center" mb={1}>
+                                  <Text fontSize="10px" fontWeight="bold" color="green.700" mr={1} _dark={{ color: "green.200" }}>
+                                    Chapter:
+                                  </Text>
+                                  <Text fontSize="10px" color="green.700" _dark={{ color: "green.200" }}>
+                                    {source.chapter}
+                                  </Text>
+                                </Flex>
+                              )}
+                              
+                              {source.heading && (
+                                <Flex align="center" mb={1}>
+                                  <Text fontSize="10px" fontWeight="bold" color="green.700" mr={1} _dark={{ color: "green.200" }}>
+                                    Heading:
+                                  </Text>
+                                  <Text fontSize="10px" color="green.700" _dark={{ color: "green.200" }}>
+                                    {source.heading}
+                                  </Text>
+                                </Flex>
+                              )}
+                              
+                              {source.section && (
+                                <Flex align="center" mb={1}>
+                                  <Text fontSize="10px" fontWeight="bold" color="green.700" mr={1} _dark={{ color: "green.200" }}>
+                                    Section:
+                                  </Text>
+                                  <Text fontSize="10px" color="green.700" _dark={{ color: "green.200" }}>
+                                    {source.section}
+                                  </Text>
+                                </Flex>
+                              )}
+                              
+                              {source.page && (
+                                <Flex align="center" mb={1}>
+                                  <Text fontSize="10px" fontWeight="bold" color="green.700" mr={1} _dark={{ color: "green.200" }}>
+                                    Page:
+                                  </Text>
+                                  <Text fontSize="10px" color="green.700" _dark={{ color: "green.200" }}>
+                                    {source.page}
+                                  </Text>
+                                </Flex>
+                              )}
+                              
+                              {source.paragraph && (
+                                <Flex align="center" mb={1}>
+                                  <Text fontSize="10px" fontWeight="bold" color="green.700" mr={1} _dark={{ color: "green.200" }}>
+                                    Paragraph:
+                                  </Text>
+                                  <Text fontSize="10px" color="green.700" _dark={{ color: "green.200" }}>
+                                    {source.paragraph}
+                                  </Text>
+                                </Flex>
+                              )}
+                              
+                              {source.regulation && (
+                                <Flex align="center" mb={1}>
+                                  <Text fontSize="10px" fontWeight="bold" color="green.700" mr={1} _dark={{ color: "green.200" }}>
+                                    Regulation:
+                                  </Text>
+                                  <Text fontSize="10px" color="green.700" _dark={{ color: "green.200" }}>
+                                    {source.regulation}
+                                  </Text>
+                                </Flex>
+                              )}
+                              
+                              {source.federalRegister && (
+                                <Flex align="center">
+                                  <Text fontSize="10px" fontWeight="bold" color="green.700" mr={1} _dark={{ color: "green.200" }}>
+                                    Federal Register:
+                                  </Text>
+                                  <Text fontSize="10px" color="green.700" _dark={{ color: "green.200" }}>
+                                    {source.federalRegister}
+                                  </Text>
+                                </Flex>
+                              )}
+                            </Box>
+                          )}
+                          
                           {source.description && (
-                            <Text color="gray.500" fontSize="10px" mt="2px" noOfLines={2} _dark={{ color: "gray.300" }}>
+                            <Text color="gray.500" fontSize="10px" mt={2} _dark={{ color: "gray.300" }}>
                               {source.description}
                             </Text>
                           )}

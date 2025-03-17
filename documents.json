@@ -1,72 +1,32 @@
 [
   {
-    "id": "f2b07faf-9e89-4115-a7f7-fe2998ebbee7",
-    "name": "HAP_ABC.pdf",
-    "uploadedAt": "2025-03-15T04:11:14.263Z",
+    "id": "1eefa4a2-303e-42b0-9e85-ca18f1ebc9c7",
+    "name": "Admin Plan_2023-2024_Final Version.pdf",
+    "uploadedAt": "2025-03-17T16:51:52.855Z",
     "status": "active",
     "fileType": ".pdf",
-    "size": 338893,
+    "size": 1337377,
     "version": "1.0",
-    "openaiFileId": "file-TZEDoVfXgodL41fB5w5em5"
+    "openaiFileId": "file-FwFmkyAMuqi6jzMQLsbpar"
   },
   {
-    "id": "cc1c236f-8f6d-4540-85d4-17731f0e930c",
-    "name": "HAP_Contracts_HCV_Guidebook_Chapter_July_2021.pdf",
-    "uploadedAt": "2025-03-15T04:11:15.262Z",
+    "id": "31b2963e-cf8b-45a6-84f2-a068b4a71009",
+    "name": "50900.pdf",
+    "uploadedAt": "2025-03-17T16:53:29.197Z",
     "status": "active",
     "fileType": ".pdf",
-    "size": 312464,
+    "size": 504128,
     "version": "1.0",
-    "openaiFileId": "file-XpozfcG6jFhiaavAtB2LMy"
+    "openaiFileId": "file-FyfqdeSeg5YFeYS3hjQL7c"
   },
   {
-    "id": "7a72532a-dda5-436a-ac4f-0195e96cba59",
-    "name": "HCV_Guidebook_Eligibility_Determination_and_Denial_of_Assistance.pdf",
-    "uploadedAt": "2025-03-15T04:11:16.700Z",
+    "id": "646645ee-ea3d-4814-be47-70f0ffe49a7d",
+    "name": "2024-17957.pdf",
+    "uploadedAt": "2025-03-17T16:53:52.784Z",
     "status": "active",
     "fileType": ".pdf",
-    "size": 542716,
+    "size": 290747,
     "version": "1.0",
-    "openaiFileId": "file-593RdpJdUpxXRuJXZUYDxX"
-  },
-  {
-    "id": "215a34b1-669f-4594-8d62-360365d0525a",
-    "name": "HCV_Guidebook_Moves_and_Portability.pdf",
-    "uploadedAt": "2025-03-15T04:11:17.828Z",
-    "status": "active",
-    "fileType": ".pdf",
-    "size": 711898,
-    "version": "1.0",
-    "openaiFileId": "file-VMFDCtgLxJNXnEnXCFfah4"
-  },
-  {
-    "id": "23353751-e31b-4fe3-9113-ac00e000650f",
-    "name": "HUD_VASH_HCV_Guidebook_Chapter_July_2021.pdf",
-    "uploadedAt": "2025-03-15T04:11:18.633Z",
-    "status": "active",
-    "fileType": ".pdf",
-    "size": 241826,
-    "version": "1.0",
-    "openaiFileId": "file-DQ5QM33SJ4ttQHj1ZmwGcc"
-  },
-  {
-    "id": "e0f8ea73-8c6b-4cc3-9fa7-f6c5b4d20019",
-    "name": "Admin Plan_2021-2022.pdf",
-    "uploadedAt": "2025-03-15T05:41:17.202Z",
-    "status": "active",
-    "fileType": ".pdf",
-    "size": 1869336,
-    "version": "1.0",
-    "openaiFileId": "file-2ddthTt9QB1YBNkRTD5cRY"
-  },
-  {
-    "id": "8816e866-ebc4-4495-8c9b-2de0b553f4b7",
-    "name": "FSS-Program-Guidebook.pdf",
-    "uploadedAt": "2025-03-15T19:39:30.103Z",
-    "status": "active",
-    "fileType": ".pdf",
-    "size": 3227989,
-    "version": "1.0",
-    "openaiFileId": "file-RqNMXFWzx3L4a3YdbPsSAP"
+    "openaiFileId": "file-4ELdA9ve2s5vJ1K1ko2jvk"
   }
 ]

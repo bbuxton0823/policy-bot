@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Button, Box, Text, VStack, Progress, Flex, useToast } from '@chakra-ui/react';
-import { FiUpload, FiFile, FiCheckCircle } from 'react-icons/fi';
+import { Button, Box, Text, VStack, Progress, Flex, useToast, Badge } from '@chakra-ui/react';
+import { FiUpload, FiFile, FiCheckCircle, FiPlus } from 'react-icons/fi';
 
 interface DocumentUploadProps {
   onUploadComplete: (documents: any[], vectorStoreId?: string) => void;
@@ -104,9 +104,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadComplete }) => 
         // Add uploaded files to the list
         setUploadedFiles(result.documents.map((doc: any) => doc.name));
         
+        const pluralSuffix = result.documents.length > 1 ? 's' : '';
         toast({
           title: 'Documents uploaded successfully',
-          description: `${result.documents.length} document(s) processed and added to the vector store`,
+          description: `${result.documents.length} document${pluralSuffix} processed and added to the vector store`,
           status: 'success',
           duration: 5000,
           isClosable: true,
@@ -136,7 +137,12 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadComplete }) => 
   return (
     <Box p={6} borderWidth="1px" borderRadius="lg" bg="white" shadow="md" _dark={{ bg: "gray.800" }}>
       <VStack spacing={4} align="stretch">
-        <Text fontSize="xl" fontWeight="bold">Upload Policy Documents</Text>
+        <Flex justify="space-between" align="center">
+          <Text fontSize="xl" fontWeight="bold">Upload Policy Documents</Text>
+          <Badge colorScheme="blue" fontSize="0.8em" p={1} borderRadius="md">
+            Multiple files supported
+          </Badge>
+        </Flex>
         
         <Box
           borderWidth="2px"
@@ -153,7 +159,17 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadComplete }) => 
             bg: isDragging ? "blue.900" : "gray.700",
             _hover: { bg: isDragging ? "blue.900" : "gray.600" }
           }}
-          onClick={() => document.getElementById('file-input')?.click()}
+          onClick={() => {
+            toast({
+              title: "Multiple files supported",
+              description: "Hold Ctrl (or Cmd on Mac) to select multiple files",
+              status: "info",
+              duration: 3000,
+              isClosable: true,
+              position: "top"
+            });
+            document.getElementById('file-input')?.click();
+          }}
           onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -172,7 +188,13 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadComplete }) => 
           <Text fontWeight={isDragging ? "medium" : "normal"}>
             {isDragging ? "Drop files here" : "Drag and drop files here or click to browse"}
           </Text>
-          <Text fontSize="sm" color="gray.500">Supports PDF, Word, and text documents</Text>
+          <Text fontSize="sm" color="gray.500" mb={2}>Supports PDF, Word, and text documents</Text>
+          <Flex justify="center" align="center">
+            <FiPlus size="12px" style={{ marginRight: '4px' }} />
+            <Text fontSize="sm" fontWeight="medium" color="blue.500">
+              Select multiple files at once
+            </Text>
+          </Flex>
         </Box>
         
         {files.length > 0 && (

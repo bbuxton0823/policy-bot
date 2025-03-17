@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Box, Tabs, TabList, TabPanels, Tab, TabPanel, useToast, useColorModeValue } from '@chakra-ui/react';
 import DocumentUpload from './components/DocumentUpload';
 import DocumentLibrary from './components/DocumentLibrary';
@@ -13,6 +13,26 @@ export default function Home() {
   
   // Use color mode values for dynamic styling
   const bgColor = useColorModeValue('gray.50', 'gray.800');
+  
+  // Fetch the most recent vector store ID when the component mounts
+  useEffect(() => {
+    const fetchLatestVectorStore = async () => {
+      try {
+        const response = await fetch('/api/vector-stores/latest');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.vectorStoreId) {
+            console.log('Setting active vector store ID from API:', data.vectorStoreId);
+            setActiveVectorStoreId(data.vectorStoreId);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching latest vector store:', error);
+      }
+    };
+    
+    fetchLatestVectorStore();
+  }, []);
   
   const handleUploadComplete = (documents: any[], vectorStoreId?: string) => {
     if (vectorStoreId) {

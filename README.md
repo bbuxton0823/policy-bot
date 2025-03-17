@@ -397,3 +397,24 @@ policy-bot/
 ## License
 
 MIT 
+
+## Deployment
+
+When deploying Policy Bot to production or setting up a new instance:
+
+1. **Build the application**:
+   ```bash
+   npm run build
+   ```
+   This process automatically clears the documents.json file, ensuring a clean state for each new deployment.
+
+2. **Start the production server**:
+   ```bash
+   npm run start
+   ```
+
+3. **Manually clear documents** (if needed):
+   ```bash
+   npm run clear-documents
+   ```
+   This command removes all document records from the application without requiring a full rebuild. 
